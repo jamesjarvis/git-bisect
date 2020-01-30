@@ -1,19 +1,21 @@
 package bisect
 
 // GoodCommit changes the map with response to being a good commit
+// New search space is it and it's ancestors
 func GoodCommit(p map[string]DAGEntry, c string) map[string]DAGEntry {
-	newsearchspace := GetParents(p, c)
-	newsearchspace = append(newsearchspace, p[c])
+	newsearchspace := StartGetParents(p, c)
+	newsearchspace[c] = p[c]
 
-	return GenerateMap(newsearchspace)
+	return RemoveMapFromMap(p, newsearchspace)
 }
 
 // BadCommit changes the map with response to being a bad commit
+// New search space is the old search space - it and it's ancestors
 func BadCommit(p map[string]DAGEntry, c string) map[string]DAGEntry {
-	newsearchspace := GetParents(p, c)
-	newsearchspace = append(newsearchspace, p[c])
+	newsearchspace := StartGetParents(p, c)
+	newsearchspace[c] = p[c]
 
-	return RemoveFromMap(p, newsearchspace)
+	return newsearchspace
 }
 
 // MidPoint gets a midpoint from the map
