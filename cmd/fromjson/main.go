@@ -1,42 +1,27 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"os"
+	"log"
 
 	bisect "github.com/jamesjarvis/git-bisect/pkg/bisect"
 )
 
 func main() {
-	jsonFile, err := os.Open("/Users/jarjames/git/git-bisect/tests/test_react0.json")
-	if err != nil {
-		panic(err)
-	}
-	byteValue, err := ioutil.ReadAll(jsonFile)
-	if err != nil {
-		panic(err)
-	}
+	problem := bisect.Connect()
 
-	var file bisect.Root
+	dag := bisect.DagMapMaker(&problem)
 
-	json.Unmarshal([]byte(byteValue), &file)
-	if err != nil {
-		panic(err)
-	}
+	log.Printf("Problem: %v has %v commits\n", problem.Name, len(dag))
 
-	dag := bisect.DagMapMaker(&file.Problem)
+	dag = bisect.GoodCommit(dag, problem.Good)
 
-	fmt.Printf("Problem: %v has %v commits\n", file.Problem.Name, len(dag))
+	// fmt.Printf("Problem: %v now has %v commits after GOOD (%v)\n", problem.Name, len(dag), problem.Good)
 
-	dag = bisect.GoodCommit(dag, file.Problem.Good)
+	dag = bisect.BadCommit(dag, problem.Bad)
 
-	fmt.Printf("Problem: %v now has %v commits after GOOD (%v)\n", file.Problem.Name, len(dag), file.Problem.Good)
+	// fmt.Printf("Problem: %v now has %v commits after BAD (%v)\n", problem.Name, len(dag), problem.Bad)
 
-	dag = bisect.BadCommit(dag, file.Problem.Bad)
+	score := bisect.NextMove(dag)
 
-	fmt.Printf("Problem: %v now has %v commits after BAD (%v)\n", file.Problem.Name, len(dag), file.Problem.Bad)
-
-	// fmt.Printf("First commit from remaining: %v", dag)
+	log.Printf("Score for %v: %v\n", problem.Name, score.Score)
 }

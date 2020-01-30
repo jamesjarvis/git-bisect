@@ -32,16 +32,16 @@ type Problem struct {
 	Dag  []DAGEntry `json:"dag"`
 }
 
-// Solution is the solution section of the json
-type Solution struct {
+// Solutions is the solution section of the json
+type Solutions struct {
 	Bug    string   `json:"bug"`
 	AllBad []string `json:"all_bad"`
 }
 
 // Root is all of the json
 type Root struct {
-	Problem  Problem
-	Solution Solution
+	Problem   Problem
+	Solutions Solutions
 }
 
 func (d *Root) UnmarshalJSON(data []byte) error {
@@ -62,11 +62,31 @@ func (d *Root) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	err = json.Unmarshal(sbytes, &d.Solution)
+	err = json.Unmarshal(sbytes, &d.Solutions)
 
 	if err != nil {
 		return err
 	}
 
 	return err
+}
+
+// Question is the question json interface
+type Question struct {
+	Question string `json:"Question"`
+}
+
+// Answer is the answer json interface
+type Answer struct {
+	Answer string `json:"Answer"`
+}
+
+// Solution is the solution json interface
+type Solution struct {
+	Solution string `json:"Solution"`
+}
+
+// Score is the score json interface (should change for the websockets)
+type Score struct {
+	Score int `json:"Score"`
 }

@@ -166,3 +166,12 @@ func GenerateMap(entries []DAGEntry) map[string]DAGEntry {
 
 	return mappeh
 }
+
+// GetFirstElementFromMap gets the first element from the map
+func GetFirstElementFromMap(m map[string]DAGEntry) string {
+	var temp string
+	for key := range m {
+		return key
+	}
+	return temp
+}
