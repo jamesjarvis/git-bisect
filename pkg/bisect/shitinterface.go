@@ -32,12 +32,22 @@ func BadCommit(p map[string]DAGEntry, c string) map[string]DAGEntry {
 
 // MidPoint gets a midpoint from the map
 func MidPoint(p map[string]DAGEntry) string {
-	for {
-		temp := GetFirstElementFromMap(p)
+	maxlen := EstimateMaxAncestry(p)
+	maxattemps := 100
+	var temp string
+	for i := 0; i < maxattemps; i++ {
+		temp = GetFirstElementFromMap(p)
 		if temp != LastBadCommit && temp != "" {
-			return temp
+			lenParents := StartGetLengthParents(p, temp)
+			if lenParents > 0 {
+				similarity := (float64(maxlen) / 2.0) / float64(StartGetLengthParents(p, temp))
+				if similarity <= 1.25 && similarity >= 0.75 {
+					return temp
+				}
+			}
 		}
 	}
+	return temp
 }
 
 // NextMove actually contains the logic
