@@ -74,9 +74,6 @@ func GetParents(m map[string]DAGEntry, d DAGEntry) map[string]DAGEntry {
 	// Then add itself to visited
 	Visited[d.commit] = true
 
-	// currentCommit := m[commit]
-	// Ancestors[commit] = currentCommit
-
 	// Then repeat the process with the children...
 	for _, parent := range d.parents {
 		currentParent := m[parent]
@@ -85,63 +82,8 @@ func GetParents(m map[string]DAGEntry, d DAGEntry) map[string]DAGEntry {
 		tempAncestors = AppendMaps(tempAncestors, results)
 	}
 
-	// // Remove parents that no longer exist
-	// var tempParents []string
-	// for _, parent := range currentCommit.parents {
-	// 	if ExistInMap(m, parent) {
-	// 		tempParents = append(tempParents, parent)
-	// 	}
-	// }
-	// currentCommit.parents = tempParents
-
 	return tempAncestors
 }
-
-// // GetParents retrieves all parents (and the parents parents) of a commit
-// func GetParents(p map[string]DAGEntry, c string) []DAGEntry {
-// 	var parents []DAGEntry
-
-// 	// //TODO: Remove duplicates
-
-// 	actualcommit, ok := p[c]
-// 	if !ok {
-// 		return nil
-// 	}
-// 	// parents = append(parents, actualcommit)
-
-// 	for _, parent := range actualcommit.parents {
-// 		parents = append(parents, GetParents(p, parent)...)
-// 	}
-
-// 	for i := range parents {
-// 		if parents[i].commit == c {
-// 			return nil
-// 		}
-// 	}
-
-// 	fmt.Println(len(parents))
-
-// 	return append(parents, actualcommit)
-// }
-
-// func GetAllParents(p map[string]DAGEntry, c string) map[string]DAGEntry {
-// 	var parents map[string]DAGEntry
-
-// 	// First, get the initial commit, and generate an empty map, and a mutex.
-// 	// Then, send each parent to a pool of workers and
-// }
-
-// // Create a datastore with the hashamp
-// // Use Channels to send requests to this hashmap.
-
-// // Worker would ask whether to include this particular commit (does it exist in the total map, and does it not already exist in the new parents?)
-// // Then the datastore would return with the DAGEntry if it has been added, or nil if it was not added
-// // Then the worker would either die if nil, or spawn new workers with the parents from the DAGEntry
-// // Then finally, to kill the datastore and signal that the parents have all been found, the "done" channel should be empty??
-
-// func parentWorker(commit string, wg *sync.WaitGroup) {
-
-// }
 
 // ExistInMap checks if a DAGEntry exists in a map
 func ExistInMap(m map[string]DAGEntry, c string) bool {
