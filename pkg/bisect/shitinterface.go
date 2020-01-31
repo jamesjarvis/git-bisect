@@ -6,7 +6,7 @@ import "log"
 var LastBadCommit string
 
 // GoodCommit changes the map with response to being a good commit
-// New search space is it and it's ancestors
+// New search space is the old search space - it and it's ancestors
 func GoodCommit(p map[string]DAGEntry, c string) map[string]DAGEntry {
 	newsearchspace := StartGetParents(p, c)
 	newsearchspace[c] = p[c]
@@ -19,7 +19,7 @@ func GoodCommit(p map[string]DAGEntry, c string) map[string]DAGEntry {
 }
 
 // BadCommit changes the map with response to being a bad commit
-// New search space is the old search space - it and it's ancestors
+// New search space is it and it's ancestors
 func BadCommit(p map[string]DAGEntry, c string) map[string]DAGEntry {
 	LastBadCommit = c
 	newsearchspace := StartGetParents(p, c)
