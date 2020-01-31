@@ -1,6 +1,18 @@
 package bisect
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
+
+// CommitVertex is the data structure that will be used as vertex in the graph
+type CommitVertex struct {
+	Commit string
+}
+
+// String implements the Vertex's interface method Id()
+func (v CommitVertex) String() string {
+	return v.Commit
+}
 
 // DAGEntry is the actual DAG part
 type DAGEntry struct {

@@ -1,5 +1,11 @@
 package bisect
 
+import (
+	"log"
+
+	"github.com/jamesjarvis/git-bisect/pkg/dag"
+)
+
 // DagMapMaker takes the problem struct and returns the Dag Map
 func DagMapMaker(p *Problem) map[string]DAGEntry {
 	var m map[string]DAGEntry
@@ -12,7 +18,32 @@ func DagMapMaker(p *Problem) map[string]DAGEntry {
 	return m
 }
 
-var Visited map[string]bool
+// DAGMaker takes the problem struct and returns the Dag
+func DAGMaker(p *Problem) *dag.DAG {
+	// initialize a new graph
+	d := dag.NewDAG()
+
+	var currentVertex string
+	var currentParentVertex string
+	var err error
+
+	// Add the vertex and edge's
+	for _, current := range p.Dag {
+		currentVertex = current.commit
+
+		for _, parent := range current.parents {
+			currentParentVertex = parent
+
+			err = d.AddEdge(currentVertex, currentParentVertex)
+			if err != nil {
+				log.Printf("Error adding edge of (%v) -> (%v)", currentParentVertex, currentVertex)
+				// log.Fatal(err)
+			}
+		}
+	}
+
+	return d
+}
 
 // InitialiseVisited returns a map with the same keys as the input map, but false as all of its values
 func InitialiseVisited(m map[string]DAGEntry) map[string]bool {
@@ -48,79 +79,79 @@ func RemoveMapFromMap(a map[string]DAGEntry, b map[string]DAGEntry) map[string]D
 	return a
 }
 
-// StartGetParents initialises the "visited" map before starting the recursion.
-func StartGetParents(m map[string]DAGEntry, commit string) map[string]DAGEntry {
-	Visited = InitialiseVisited(m)
-	currentParent := m[commit]
+// // StartGetParents initialises the "visited" map before starting the recursion.
+// func StartGetParents(m map[string]DAGEntry, commit string) map[string]DAGEntry {
+// 	Visited = InitialiseVisited(m)
+// 	currentParent := m[commit]
 
-	return GetParents(m, currentParent)
-}
+// 	return GetParents(m, currentParent)
+// }
 
-// GetParents is the recursive get parents method for retrieving ancestory
-func GetParents(m map[string]DAGEntry, d DAGEntry) map[string]DAGEntry {
+// // GetParents is the recursive get parents method for retrieving ancestory
+// func GetParents(m map[string]DAGEntry, d DAGEntry) map[string]DAGEntry {
 
-	tempAncestors := make(map[string]DAGEntry)
+// 	tempAncestors := make(map[string]DAGEntry)
 
-	// If it doesnt exist any more, ignore.
-	if !ExistInMap(m, d.commit) {
-		return tempAncestors
-	}
+// 	// If it doesnt exist any more, ignore.
+// 	if !ExistInMap(m, d.commit) {
+// 		return tempAncestors
+// 	}
 
-	// If it has been visited, ignore
-	if VisitedStatus(Visited, d.commit) {
-		return tempAncestors
-	}
+// 	// If it has been visited, ignore
+// 	if VisitedStatus(Visited, d.commit) {
+// 		return tempAncestors
+// 	}
 
-	// Then add itself to visited
-	Visited[d.commit] = true
+// 	// Then add itself to visited
+// 	Visited[d.commit] = true
 
-	// Then repeat the process with the parents...
-	for _, parent := range d.parents {
-		currentParent := m[parent]
-		tempAncestors[parent] = currentParent
-		results := GetParents(m, currentParent)
-		tempAncestors = AppendMaps(tempAncestors, results)
-	}
+// 	// Then repeat the process with the parents...
+// 	for _, parent := range d.parents {
+// 		currentParent := m[parent]
+// 		tempAncestors[parent] = currentParent
+// 		results := GetParents(m, currentParent)
+// 		tempAncestors = AppendMaps(tempAncestors, results)
+// 	}
 
-	return tempAncestors
-}
+// 	return tempAncestors
+// }
 
-// StartGetLengthParents initialises the "visited" map before starting the recursion.
-func StartGetLengthParents(m map[string]DAGEntry, commit string) int {
-	Visited = InitialiseVisited(m)
-	currentParent := m[commit]
+// // StartGetLengthParents initialises the "visited" map before starting the recursion.
+// func StartGetLengthParents(m map[string]DAGEntry, commit string) int {
+// 	Visited = InitialiseVisited(m)
+// 	currentParent := m[commit]
 
-	return GetLengthParents(m, currentParent)
-}
+// 	return GetLengthParents(m, currentParent)
+// }
 
-// GetLengthParents is the recursive get parents method for retrieving ancestory
-func GetLengthParents(m map[string]DAGEntry, d DAGEntry) int {
+// // GetLengthParents is the recursive get parents method for retrieving ancestory
+// func GetLengthParents(m map[string]DAGEntry, d DAGEntry) int {
 
-	lenAncestors := 0
+// 	lenAncestors := 0
 
-	// If it doesnt exist any more, ignore.
-	if !ExistInMap(m, d.commit) {
-		return lenAncestors
-	}
+// 	// If it doesnt exist any more, ignore.
+// 	if !ExistInMap(m, d.commit) {
+// 		return lenAncestors
+// 	}
 
-	// If it has been visited, ignore
-	if VisitedStatus(Visited, d.commit) {
-		return lenAncestors
-	}
+// 	// If it has been visited, ignore
+// 	if VisitedStatus(Visited, d.commit) {
+// 		return lenAncestors
+// 	}
 
-	// Then add itself to visited
-	Visited[d.commit] = true
+// 	// Then add itself to visited
+// 	Visited[d.commit] = true
 
-	// Then repeat the process with the parents...
-	for _, parent := range d.parents {
-		currentParent := m[parent]
-		lenAncestors++
-		results := GetLengthParents(m, currentParent)
-		lenAncestors = lenAncestors + results
-	}
+// 	// Then repeat the process with the parents...
+// 	for _, parent := range d.parents {
+// 		currentParent := m[parent]
+// 		lenAncestors++
+// 		results := GetLengthParents(m, currentParent)
+// 		lenAncestors = lenAncestors + results
+// 	}
 
-	return lenAncestors
-}
+// 	return lenAncestors
+// }
 
 // ExistInMap checks if a DAGEntry exists in a map
 func ExistInMap(m map[string]DAGEntry, c string) bool {
