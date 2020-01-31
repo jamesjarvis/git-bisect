@@ -6,6 +6,45 @@ import (
 	"sync"
 )
 
+/*
+This is a guesstimate of what we have
+	A
+   / \
+  B   C
+ / \ / \
+D   E   F
+ \ /
+  G
+
+Should be:
+
+Vertices:
+A
+B
+C
+D
+E
+F
+
+Edges:
+B -> A
+C -> A
+D -> B
+E -> B, C
+F -> C
+G -> D, E
+
+Ancestors:
+A ->
+B -> A
+C -> A
+D -> B, A
+E -> B, A, C
+F -> C, A
+G -> D, B, A, E, C
+
+*/
+
 // // Vertex is the interface to be implemented for the vertices of the DAG.
 // type Vertex interface {
 // 	// Return the id of this vertex. This id must be unique and never change.
@@ -23,6 +62,7 @@ type DAG struct {
 	verticesLocked *dMutex
 	ancestorsCache map[string]map[string]bool
 	visited        map[string]bool
+	visitedLock    sync.RWMutex
 }
 
 // NewDAG creates / initializes a new DAG.
@@ -153,13 +193,13 @@ func (d *DAG) AddEdge(src string, dst string) error {
 	// ensure vertices
 	if !d.vertices[src] {
 		// TODO: I think that this is unnecessary
-		if exists, _ := d.VertexExists(src); exists {
+		if _, exists := d.vertices[src]; exists {
 			return IdDuplicateError{src}
 		}
 		d.addVertex(src)
 	}
 	if !d.vertices[dst] {
-		if exists, _ := d.VertexExists(dst); exists {
+		if _, exists := d.vertices[dst]; exists {
 			return IdDuplicateError{dst}
 		}
 		d.addVertex(dst)
@@ -342,64 +382,42 @@ func (d *DAG) GetParents(v string) (map[string]bool, error) {
 // GetAncestors return all ancestors of the vertex v. GetAncestors returns an
 // error, if v is nil or unknown.
 //
-// Note, in order to get the ancestors, GetAncestors populates the ancestor-
-// cache as needed. Depending on order and size of the sub-graph of v this may
-// take a long time and consume a lot of memory.
-func (d *DAG) GetAncestors(v string) (map[string]bool, error) {
+
+// GetAncestorsSimple returns all ancestors of the vertex v
+func (d *DAG) GetAncestorsSimple(v string) (map[string]bool, error) {
 	d.muDAG.RLock()
 	defer d.muDAG.RUnlock()
 	if err := d.saneVertex(v); err != nil {
 		return nil, err
 	}
-	return copyMap(d.getAncestors(v)), nil
+
+	// Reset Visited
+	d.visited = make(map[string]bool)
+
+	d.getAncestorsSimple(&v)
+
+	return d.visited, nil
 }
 
-func (d *DAG) getAncestors(v string) map[string]bool {
-
-	// in the best case we have already a populated cache
-	d.muCache.RLock()
-	cache, exists := d.ancestorsCache[v]
-	d.muCache.RUnlock()
-	if exists {
-		return cache
+func (d *DAG) getAncestorsSimple(v *string) bool {
+	d.visitedLock.Lock()
+	if _, visited := d.visited[*v]; visited {
+		d.visitedLock.Unlock()
+		return false
 	}
+	d.visited[*v] = true
+	d.visitedLock.Unlock()
 
-	// lock this vertex to work on it exclusively
-	d.verticesLocked.lock(v)
-	defer d.verticesLocked.unlock(v)
-
-	// now as we have locked this vertex, check (again) that no one has
-	// meanwhile populated the cache
-	d.muCache.RLock()
-	cache, exists = d.ancestorsCache[v]
-	d.muCache.RUnlock()
-	if exists {
-		return cache
-	}
-
-	// as there is no cache, we start from scratch and first of all collect
-	// all ancestors locally
-	cache = make(map[string]bool)
-	var mu sync.Mutex
-	if parents, ok := d.inboundEdge[v]; ok {
+	if parents, ok := d.inboundEdge[*v]; ok {
 
 		// for each parent collect its ancestors
 		for parent := range parents {
-			parentAncestors := d.getAncestors(parent)
-			mu.Lock()
-			for ancestor := range parentAncestors {
-				cache[ancestor] = true
-			}
-			cache[parent] = true
-			mu.Unlock()
+			// I'll be honest, I don't care about the output - the returns just kill the function quickly
+			d.getAncestorsSimple(&parent)
 		}
+		return true
 	}
-
-	// remember the collected descendents
-	d.muCache.Lock()
-	d.ancestorsCache[v] = cache
-	d.muCache.Unlock()
-	return cache
+	return false
 }
 
 // GetOrderedAncestors returns all ancestors of the vertex v in a breath-first

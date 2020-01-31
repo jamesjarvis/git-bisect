@@ -26,12 +26,16 @@ var LastBadCommit string
 // New search space is the old search space - it and it's ancestors
 func GoodCommitNew(dag *dag.DAG, c string) {
 
-	newsearchspace, err := dag.GetAncestors(c)
+	newsearchspace, err := dag.GetAncestorsSimple(c)
 	if err != nil {
 		log.Fatalf("Failed to get ancestors of (%v)", c)
 	}
 
 	log.Printf("Size of ancestors for (%v): %v", c, len(newsearchspace))
+
+	ances, err := dag.GetOrderedAncestors(c)
+
+	log.Printf("Size of ordered ancestors for (%v): %v", c, len(ances))
 
 	// newsearchspace := StartGetParents(p, c)
 	// newsearchspace[c] = p[c]
