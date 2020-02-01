@@ -178,7 +178,7 @@ func GenerateMap(entries []DAGEntry) map[string]DAGEntry {
 }
 
 // GetFirstElementFromMap gets the first element from the map
-func GetFirstElementFromMap(m map[string]DAGEntry) string {
+func GetFirstElementFromMap(m map[string]bool) string {
 	var temp string
 	for key := range m {
 		return key

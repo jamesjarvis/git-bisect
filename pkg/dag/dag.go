@@ -45,12 +45,6 @@ G -> D, B, A, E, C
 
 */
 
-// // Vertex is the interface to be implemented for the vertices of the DAG.
-// type Vertex interface {
-// 	// Return the id of this vertex. This id must be unique and never change.
-// 	String() string
-// }
-
 // DAG implements the data structure of the DAG.
 // The elements are literally just strings, because there is no reason for them not to be
 // The parent relations are stored in "inboundEdge", with a map of the children to map of parents
@@ -58,11 +52,14 @@ type DAG struct {
 	muDAG          sync.RWMutex
 	vertices       map[string]bool
 	inboundEdge    map[string]map[string]bool
+	outboundEdge   map[string]map[string]bool
 	muCache        sync.RWMutex
 	verticesLocked *dMutex
-	ancestorsCache map[string]map[string]bool
-	visited        map[string]bool
-	visitedLock    sync.RWMutex
+	// ancestorsCache map[string]map[string]bool
+	visited       map[string]bool
+	visitedLock   sync.RWMutex
+	MidPoint      string
+	MostRecentBad string
 }
 
 // NewDAG creates / initializes a new DAG.
@@ -70,9 +67,10 @@ func NewDAG() *DAG {
 	return &DAG{
 		vertices:       make(map[string]bool),
 		inboundEdge:    make(map[string]map[string]bool),
+		outboundEdge:   make(map[string]map[string]bool),
 		verticesLocked: newDMutex(),
-		ancestorsCache: make(map[string]map[string]bool),
-		visited:        make(map[string]bool),
+		// ancestorsCache: make(map[string]map[string]bool),
+		visited: make(map[string]bool),
 	}
 }
 
@@ -127,46 +125,28 @@ func (d *DAG) DeleteVertex(v string) error {
 		return err
 	}
 
-	// // get descendents and ancestors as they are now
-	// ancestors := copyMap(d.getAncestors(v))
-
-	// // delete v in outbound edges of parents
-	// if _, exists := d.inboundEdge[v]; exists {
-	// 	for parent := range d.inboundEdge[v] {
-	// 		delete(d.outboundEdge[parent], v)
-	// 	}
+	// // delete v from inbound edges
+	// for key := range d.inboundEdge {
+	// 	delete(d.inboundEdge[key], v)
 	// }
 
-	// // delete v in inbound edges of children
-	// if _, exists := d.outboundEdge[v]; exists {
-	// 	for child := range d.outboundEdge[v] {
-	// 		delete(d.inboundEdge[child], v)
-	// 	}
-	// }
+	// delete v in outbound edges of parents
+	if _, exists := d.inboundEdge[v]; exists {
+		for parent := range d.inboundEdge[v] {
+			delete(d.outboundEdge[parent], v)
+		}
+	}
 
-	// delete v from inbound edges
-	for key := range d.inboundEdge {
-		delete(d.inboundEdge[key], v)
+	// delete v in inbound edges of children
+	if _, exists := d.outboundEdge[v]; exists {
+		for child := range d.outboundEdge[v] {
+			delete(d.inboundEdge[child], v)
+		}
 	}
 
 	// delete in- and outbound of v itself
 	delete(d.inboundEdge, v)
-
-	// // for v and all its descendants delete cached ancestors
-	// for descendant := range descendants {
-	// 	if _, exists := d.ancestorsCache[descendant]; exists {
-	// 		delete(d.ancestorsCache, descendant)
-	// 	}
-	// }
-	delete(d.ancestorsCache, v)
-
-	// // for v and all its ancestors delete cached descendants
-	// for ancestor := range ancestors {
-	// 	if _, exists := d.descendantsCache[ancestor]; exists {
-	// 		delete(d.descendantsCache, ancestor)
-	// 	}
-	// }
-	// delete(d.descendantsCache, v)
+	delete(d.outboundEdge, v)
 
 	// delete v itself
 	delete(d.vertices, v)
@@ -210,16 +190,13 @@ func (d *DAG) AddEdge(src string, dst string) error {
 		return EdgeDuplicateError{src, dst}
 	}
 
-	// get ancestors as they are now
-	// ancestors := copyMap(d.getAncestors(src))
+	// prepare d.outbound[src], iff needed
+	if _, exists := d.outboundEdge[src]; !exists {
+		d.outboundEdge[src] = make(map[string]bool)
+	}
 
-	// // prepare d.outbound[src], iff needed
-	// if _, exists := d.outboundEdge[src]; !exists {
-	// 	d.outboundEdge[src] = make(map[Vertex]bool)
-	// }
-
-	// // dst is a child of src
-	// d.outboundEdge[src][dst] = true
+	// dst is a child of src
+	d.outboundEdge[src][dst] = true
 
 	// prepare d.inboundEdge[dst], iff needed
 	if _, exists := d.inboundEdge[dst]; !exists {
@@ -228,22 +205,6 @@ func (d *DAG) AddEdge(src string, dst string) error {
 
 	// src is a parent of dst
 	d.inboundEdge[dst][src] = true
-
-	// // for dst and all its descendants delete cached ancestors
-	// for descendant := range descendants {
-	// 	if _, exists := d.ancestorsCache[descendant]; exists {
-	// 		delete(d.ancestorsCache, descendant)
-	// 	}
-	// }
-	delete(d.ancestorsCache, dst)
-
-	// // for src and all its ancestors delete cached descendants
-	// for ancestor := range ancestors {
-	// 	if _, exists := d.descendantsCache[ancestor]; exists {
-	// 		delete(d.descendantsCache, ancestor)
-	// 	}
-	// }
-	// delete(d.descendantsCache, src)
 
 	return nil
 }
@@ -296,27 +257,9 @@ func (d *DAG) DeleteEdge(src string, dst string) error {
 		return EdgeUnknownError{src, dst}
 	}
 
-	// get ancestors as they are now
-	// ancestors := copyMap(d.getAncestors(dst))
-
-	// delete inbound
+	// delete inbound and outbound
 	delete(d.inboundEdge[dst], src)
-
-	// // for src and all its descendants delete cached ancestors
-	// for descendant := range descendants {
-	// 	if _, exists := d.ancestorsCache[descendant]; exists {
-	// 		delete(d.ancestorsCache, descendant)
-	// 	}
-	// }
-	delete(d.ancestorsCache, src)
-
-	// // for dst and all its ancestors delete cached descendants
-	// for ancestor := range ancestors {
-	// 	if _, exists := d.descendantsCache[ancestor]; exists {
-	// 		delete(d.descendantsCache, ancestor)
-	// 	}
-	// }
-	// delete(d.descendantsCache, dst)
+	delete(d.outboundEdge[src], dst)
 
 	return nil
 }
@@ -361,6 +304,24 @@ func (d *DAG) getRoots() map[string]bool {
 	return roots
 }
 
+// GetLeafs returns all vertices without children.
+func (d *DAG) GetLeafs() map[string]bool {
+	d.muDAG.RLock()
+	defer d.muDAG.RUnlock()
+	return d.getLeafs()
+}
+
+func (d *DAG) getLeafs() map[string]bool {
+	leafs := make(map[string]bool)
+	for v := range d.vertices {
+		dstIds, ok := d.outboundEdge[v]
+		if !ok || len(dstIds) == 0 {
+			leafs[v] = true
+		}
+	}
+	return leafs
+}
+
 // GetVertices returns all vertices.
 func (d *DAG) GetVertices() map[string]bool {
 	d.muDAG.RLock()
@@ -379,11 +340,8 @@ func (d *DAG) GetParents(v string) (map[string]bool, error) {
 	return copyMap(d.inboundEdge[v]), nil
 }
 
-// GetAncestors return all ancestors of the vertex v. GetAncestors returns an
-// error, if v is nil or unknown.
-//
-
-// GetAncestorsSimple returns all ancestors of the vertex v
+// GetAncestorsSimple returns all ancestors of the vertex v, or an error if
+// v is nil or unknown
 func (d *DAG) GetAncestorsSimple(v string) (map[string]bool, error) {
 	d.muDAG.RLock()
 	defer d.muDAG.RUnlock()
@@ -492,71 +450,6 @@ func (d *DAG) walkAncestors(v string, vertices chan string, signal chan bool) {
 			vertices <- top
 		}
 	}
-}
-
-// // ReduceTransitively transitively reduce the graph.
-// //
-// // Note, in order to do the reduction the descendant-cache of all vertices is
-// // populated (i.e. the transitive closure). Depending on order and size of DAG
-// // this may take a long time and consume a lot of memory.
-// func (d *DAG) ReduceTransitively() {
-
-// 	d.muDAG.Lock()
-// 	defer d.muDAG.Unlock()
-
-// 	graphChanged := false
-
-// 	// populate the descendents cache for all roots (i.e. the whole graph)
-// 	for root := range d.getRoots() {
-// 		_ = d.getDescendants(root)
-// 	}
-
-// 	// for each vertex
-// 	for v := range d.vertices {
-
-// 		// map of descendants of the children of v
-// 		descendentsOfChildrenOfV := make(map[Vertex]bool)
-
-// 		// for each child of v
-// 		for childOfV := range d.outboundEdge[v] {
-
-// 			// collect child descendants
-// 			for descendent := range d.descendantsCache[childOfV] {
-// 				descendentsOfChildrenOfV[descendent] = true
-// 			}
-// 		}
-
-// 		// for each child of v
-// 		for childOfV := range d.outboundEdge[v] {
-
-// 			// remove the edge between v and child, iff child is a
-// 			// descendants of any of the children of v
-// 			if descendentsOfChildrenOfV[childOfV] {
-// 				delete(d.outboundEdge[v], childOfV)
-// 				delete(d.inboundEdge[childOfV], v)
-// 				graphChanged = true
-// 			}
-// 		}
-// 	}
-
-// 	// flush the descendants- and ancestor cache if the graph has changed
-// 	if graphChanged {
-// 		d.flushCaches()
-// 	}
-// }
-
-// FlushCaches completely flushes the descendants- and ancestor cache.
-//
-// Note, the only reason to call this method is to free up memory.
-// Otherwise the caches are automatically maintained.
-func (d *DAG) FlushCaches() {
-	d.muDAG.Lock()
-	defer d.muDAG.Unlock()
-	d.flushCaches()
-}
-
-func (d *DAG) flushCaches() {
-	d.ancestorsCache = make(map[string]map[string]bool)
 }
 
 // String return a textual representation of the graph.
@@ -780,4 +673,75 @@ func (d *dMutex) unlock(i interface{}) {
 
 	// release the global lock
 	d.globalMutex.Unlock()
+}
+
+// ADDITIONAL STUFF
+
+// GoodCommit
+// BadCommit
+// MidPoint
+// MostRecentBadCommit
+
+// GoodCommit should take the "good" commit, change the dag, and return an error if exists
+// New dag should be the old dag - it and it's ancestors
+// Should also return the next commit to test, or the answer if:
+// There are no edges left, it returns the last known bad commit
+// There is one vertex left, it returns that
+func (d *DAG) GoodCommit(c string) error {
+	// Get the ancestors
+	ances, err := d.GetOrderedAncestors(c)
+	if err != nil {
+		return err
+	}
+
+	// d.MidPoint = ances[len(ances)/2]
+	for _, result := range ances {
+		err = d.DeleteVertex(result)
+		if err != nil {
+			return err
+		}
+	}
+	err = d.DeleteVertex(c)
+	if err != nil {
+		return err
+	}
+
+	// WORK OUT A MIDPOINT
+
+	return nil
+}
+
+// BadCommit takes the "bad" commit, changes the dag, returning an error if required
+// New dag should be it and it's ancestors
+func (d *DAG) BadCommit(c string) error {
+	d.MostRecentBad = c
+
+	// Get the ancestors
+	ances, err := d.GetOrderedAncestors(c)
+	if err != nil {
+		return err
+	}
+
+	d.MidPoint = ances[len(ances)/2]
+
+	ances = append(ances, c)
+	for key := range d.inboundEdge {
+		if !contains(ances, key) {
+			err = d.DeleteVertex(key)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }

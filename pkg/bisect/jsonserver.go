@@ -51,8 +51,8 @@ func contains(s []string, e string) bool {
 
 // ConnectJSON does a "connection" to the "server", but json
 func ConnectJSON() Problem {
-	filetotest := "/Users/jarjames/git/git-bisect/tests/test_linux0.json"
-	// filetotest := "/Users/jarjames/git/git-bisect/tests/test_bootstrap0.json"
+	// filetotest := "/Users/jarjames/git/git-bisect/tests/test_linux0.json"
+	filetotest := "/Users/jarjames/git/git-bisect/tests/test_bootstrap0.json"
 
 	jsonFile, err := os.Open(filetotest)
 	if err != nil {

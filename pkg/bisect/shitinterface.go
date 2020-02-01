@@ -6,55 +6,39 @@ import (
 	"github.com/jamesjarvis/git-bisect/pkg/dag"
 )
 
-// LastBadCommit is the last known bad commit
-var LastBadCommit string
+// // LastBadCommit is the last known bad commit
+// var LastBadCommit string
 
 // // GoodCommit changes the map with response to being a good commit
 // // New search space is the old search space - it and it's ancestors
-// func GoodCommit(p map[string]DAGEntry, c string) map[string]DAGEntry {
-// 	newsearchspace := StartGetParents(p, c)
-// 	newsearchspace[c] = p[c]
+// func GoodCommit(dag *dag.DAG, c string) *dag.DAG {
 
-// 	newsearchspace = RemoveMapFromMap(p, newsearchspace)
+// 	ances, err := dag.GetOrderedAncestors(c)
+// 	if err != nil {
+// 		log.Fatalf("Failed to get ancestors of (%v)", c)
+// 	}
 
-// 	log.Printf("Now has %v commits after GOOD (%v)\n", len(newsearchspace), c)
+// 	log.Printf("Size of ordered ancestors for (%v): %v", c, len(ances))
+
+// 	newsearchspace := dag.GoodSearchSpace(ances, c)
+
+// 	log.Printf("Now has %v commits after GOOD (%v)\n", newsearchspace.GetOrder(), c)
 
 // 	return newsearchspace
 // }
 
-// GoodCommitNew changes the map with response to being a good commit
-// New search space is the old search space - it and it's ancestors
-func GoodCommitNew(dag *dag.DAG, c string) {
-
-	newsearchspace, err := dag.GetAncestorsSimple(c)
-	if err != nil {
-		log.Fatalf("Failed to get ancestors of (%v)", c)
-	}
-
-	log.Printf("Size of ancestors for (%v): %v", c, len(newsearchspace))
-
-	ances, err := dag.GetOrderedAncestors(c)
-
-	log.Printf("Size of ordered ancestors for (%v): %v", c, len(ances))
-
-	// newsearchspace := StartGetParents(p, c)
-	// newsearchspace[c] = p[c]
-
-	// newsearchspace = RemoveMapFromMap(p, newsearchspace)
-
-	// log.Printf("Now has %v commits after GOOD (%v)\n", len(newsearchspace), c)
-
-	// return newsearchspace
-}
-
 // // BadCommit changes the map with response to being a bad commit
 // // New search space is it and it's ancestors
-// func BadCommit(p map[string]DAGEntry, c string) map[string]DAGEntry {
+// func BadCommit(dag *dag.DAG, c string) *dag.DAG {
 // 	LastBadCommit = c
-// 	newsearchspace := StartGetParents(p, c)
-// 	newsearchspace[c] = p[c]
+// 	ances, err := dag.GetOrderedAncestors(c)
+// 	if err != nil {
+// 		log.Fatalf("Failed to get ancestors of (%v)", c)
+// 	}
 
-// 	log.Printf("Now has %v commits after BAD (%v)\n", len(newsearchspace), c)
+// 	newsearchspace := dag.BadSearchSpace(ances, c)
+
+// 	log.Printf("Now has %v commits after BAD (%v)\n", newsearchspace.GetOrder(), c)
 
 // 	return newsearchspace
 // }
@@ -79,38 +63,38 @@ func GoodCommitNew(dag *dag.DAG, c string) {
 // 	return temp
 // }
 
-// // NextMove actually contains the logic
-// func NextMove(m map[string]DAGEntry) Score {
-// 	for {
-// 		// IF the length is 0, submit the last "badcommit"
-// 		if len(m) == 0 {
-// 			return SubmitSolution(Solution{
-// 				Solution: LastBadCommit,
-// 			})
-// 		}
+// NextMove actually contains the logic
+func NextMove(d *dag.DAG) Score {
+	for {
+		// IF the length is 0, submit the last "badcommit"
+		if d.GetOrder() == 0 {
+			return SubmitSolution(Solution{
+				Solution: d.MostRecentBad,
+			})
+		}
 
-// 		// IF the length is 1, submit the only one there
-// 		if len(m) == 1 {
-// 			return SubmitSolution(Solution{
-// 				Solution: GetFirstElementFromMap(m),
-// 			})
-// 		}
+		// IF the length is 1, submit the only one there
+		if d.GetOrder() == 1 {
+			return SubmitSolution(Solution{
+				Solution: GetFirstElementFromMap(d.GetVertices()),
+			})
+		}
 
-// 		midpoint := MidPoint(m)
+		midpoint := d.MidPoint
 
-// 		// ELSE get midpoint and ask question
-// 		answer := AskQuestion(Question{
-// 			Question: midpoint,
-// 		})
+		// ELSE get midpoint and ask question
+		answer := AskQuestion(Question{
+			Question: midpoint,
+		})
 
-// 		switch answer.Answer {
-// 		case "Good":
-// 			m = GoodCommit(m, midpoint)
-// 		case "Bad":
-// 			m = BadCommit(m, midpoint)
-// 		}
-// 	}
-// }
+		switch answer.Answer {
+		case "Good":
+			d.GoodCommit(midpoint)
+		case "Bad":
+			d.BadCommit(midpoint)
+		}
+	}
+}
 
 // AskQuestion asks a question about this particular commit to the server, and updates the count
 func AskQuestion(q Question) Answer {
