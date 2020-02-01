@@ -68,6 +68,7 @@ func NextMove(d *dag.DAG) Score {
 	for {
 		// IF the length is 0, submit the last "badcommit"
 		if d.GetOrder() == 0 {
+			log.Println("Submitting MOST RECENT")
 			return SubmitSolution(Solution{
 				Solution: d.MostRecentBad,
 			})
@@ -75,6 +76,7 @@ func NextMove(d *dag.DAG) Score {
 
 		// IF the length is 1, submit the only one there
 		if d.GetOrder() == 1 {
+			log.Println("Submitting LAST LEFT")
 			return SubmitSolution(Solution{
 				Solution: GetFirstElementFromMap(d.GetVertices()),
 			})
@@ -89,9 +91,17 @@ func NextMove(d *dag.DAG) Score {
 
 		switch answer.Answer {
 		case "Good":
-			d.GoodCommit(midpoint)
+			err := d.GoodCommit(midpoint)
+			if err != nil {
+				log.Fatal(err)
+			}
+			log.Printf("Now %v commits after GOOD (%v)\n", d.GetOrder(), midpoint)
 		case "Bad":
-			d.BadCommit(midpoint)
+			err := d.BadCommit(midpoint)
+			if err != nil {
+				log.Fatal(err)
+			}
+			log.Printf("Now %v commits after BAD (%v)\n", d.GetOrder(), midpoint)
 		}
 	}
 }

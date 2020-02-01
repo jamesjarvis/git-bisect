@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	bisect "github.com/jamesjarvis/git-bisect/pkg/bisect"
@@ -27,14 +26,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Problem: %v now has %v commits after GOOD (%v)\n", problem.Name, newDag.GetOrder(), problem.Good)
+	log.Printf("Problem: %v now has %v commits after GOOD (%v)\n", problem.Name, newDag.GetOrder(), problem.Good)
 
 	err = newDag.BadCommit(problem.Bad)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Problem: %v now has %v commits after BAD (%v)\n", problem.Name, newDag.GetOrder(), problem.Bad)
+	log.Printf("Problem: %v now has %v commits after BAD (%v)\n", problem.Name, newDag.GetOrder(), problem.Bad)
 
 	// bisect.GoodCommitNew(newDag, problem.Good)
 
@@ -46,7 +45,7 @@ func main() {
 
 	// // fmt.Printf("Problem: %v now has %v commits after BAD (%v)\n", problem.Name, len(dag), problem.Bad)
 
-	// score := bisect.NextMove(dag)
+	score := bisect.NextMove(newDag)
 
-	// log.Printf("Score for %v: %v\n", problem.Name, score.Score)
+	log.Printf("Score for %v: %v\n", problem.Name, score.Score)
 }

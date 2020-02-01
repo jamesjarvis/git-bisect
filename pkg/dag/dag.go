@@ -490,6 +490,14 @@ func copyMap(in map[string]bool) map[string]bool {
 	return out
 }
 
+func copyBigMap(in map[string]map[string]bool) map[string]map[string]bool {
+	out := make(map[string]map[string]bool)
+	for key, value := range in {
+		out[key] = value
+	}
+	return out
+}
+
 /***************************
 ********** Errors **********
 ****************************/
@@ -677,16 +685,8 @@ func (d *dMutex) unlock(i interface{}) {
 
 // ADDITIONAL STUFF
 
-// GoodCommit
-// BadCommit
-// MidPoint
-// MostRecentBadCommit
-
 // GoodCommit should take the "good" commit, change the dag, and return an error if exists
 // New dag should be the old dag - it and it's ancestors
-// Should also return the next commit to test, or the answer if:
-// There are no edges left, it returns the last known bad commit
-// There is one vertex left, it returns that
 func (d *DAG) GoodCommit(c string) error {
 	// Get the ancestors
 	ances, err := d.GetOrderedAncestors(c)
@@ -708,7 +708,44 @@ func (d *DAG) GoodCommit(c string) error {
 
 	// WORK OUT A MIDPOINT
 
+	leaves := d.GetLeafs()
+
+	max := 0
+	maxCom := getFirstElementFromMap(leaves)
+	for leaf := range leaves {
+		maxAnces, err := d.GetOrderedAncestors(leaf)
+		if err != nil {
+			return err
+		}
+		tempLen := len(maxAnces)
+		if tempLen > max {
+			max = tempLen
+			maxCom = leaf
+		}
+	}
+
+	tempAnces, err := d.GetOrderedAncestors(maxCom)
+	if err != nil {
+		return err
+	}
+	if len(tempAnces) == 0 {
+		// log.Println(d.GetVertices())
+		d.MidPoint = getFirstElementFromMap(d.GetVertices())
+	} else if len(tempAnces) == 1 {
+		d.MidPoint = tempAnces[0]
+	} else {
+		d.MidPoint = tempAnces[(len(tempAnces))/2]
+	}
+
 	return nil
+}
+
+func getFirstElementFromMap(m map[string]bool) string {
+	var temp string
+	for key := range m {
+		return key
+	}
+	return temp
 }
 
 // BadCommit takes the "bad" commit, changes the dag, returning an error if required
@@ -722,15 +759,28 @@ func (d *DAG) BadCommit(c string) error {
 		return err
 	}
 
-	d.MidPoint = ances[len(ances)/2]
+	if len(ances) == 0 {
+		// log.Println(d.GetVertices())
+		d.MidPoint = getFirstElementFromMap(d.GetVertices())
+	} else if len(ances) == 1 {
+		d.MidPoint = ances[0]
+	} else {
+		d.MidPoint = ances[len(ances)/2]
+	}
 
-	ances = append(ances, c)
-	for key := range d.inboundEdge {
-		if !contains(ances, key) {
-			err = d.DeleteVertex(key)
-			if err != nil {
-				return err
-			}
+	tempParents := copyBigMap(d.outboundEdge)
+
+	d.vertices = make(map[string]bool)
+	d.inboundEdge = make(map[string]map[string]bool)
+	d.outboundEdge = make(map[string]map[string]bool)
+
+	for _, val := range ances {
+		thing, ok := tempParents[val]
+		if !ok {
+			return fmt.Errorf("Commit (%v) does not exist??", val)
+		}
+		for commit := range thing {
+			d.AddEdge(val, commit)
 		}
 	}
 

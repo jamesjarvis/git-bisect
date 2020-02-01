@@ -34,7 +34,7 @@ func DAGMaker(p *Problem) *dag.DAG {
 		for _, parent := range current.parents {
 			currentParentVertex = parent
 
-			err = d.AddEdge(currentVertex, currentParentVertex)
+			err = d.AddEdge(currentParentVertex, currentVertex)
 			if err != nil {
 				log.Printf("Error adding edge of (%v) -> (%v)", currentParentVertex, currentVertex)
 				// log.Fatal(err)
