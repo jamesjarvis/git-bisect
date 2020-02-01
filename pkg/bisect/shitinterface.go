@@ -122,6 +122,6 @@ func SubmitSolution(attempt Solution) Score {
 }
 
 // Connect connects to the server
-func Connect() Problem {
+func Connect() (Problem, error) {
 	return ConnectJSON()
 }

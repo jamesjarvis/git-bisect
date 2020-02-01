@@ -9,7 +9,10 @@ import (
 func main() {
 	log.Printf("Connecting to problem server")
 
-	problem := bisect.Connect()
+	problem, err := bisect.Connect()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	log.Printf("Retrieved problem %v, parsing...", problem.Name)
 
@@ -21,7 +24,7 @@ func main() {
 
 	log.Printf("Problem: %v has %v vertexes (commits) and %v edges with new dag map\n", problem.Name, newDag.GetOrder(), newDag.GetSize())
 
-	err := newDag.GoodCommit(problem.Good)
+	err = newDag.GoodCommit(problem.Good)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -1,2 +1,4 @@
+github.com/gorilla/websocket v1.4.1 h1:q7AeDBpnBk8AogcD4DSag/Ukw/KV+YhzLj2bP5HvKCM=
+github.com/gorilla/websocket v1.4.1/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/heimdalr/dag v0.9.12 h1:g3PyoSkLkiPgz6yTElZsWDjtZAN4uniQg4n1vi+kEuE=
 github.com/heimdalr/dag v0.9.12/go.mod h1:wLG9dKIge2qqWgEAQs101U4Av57gXObMBK+A5CY8w14=

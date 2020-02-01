@@ -50,28 +50,30 @@ func contains(s []string, e string) bool {
 }
 
 // ConnectJSON does a "connection" to the "server", but json
-func ConnectJSON() Problem {
+func ConnectJSON() (Problem, error) {
 	// filetotest := "/Users/jarjames/git/git-bisect/tests/test_linux0.json"
 	filetotest := "/Users/jarjames/git/git-bisect/tests/test_bootstrap0.json"
 	// filetotest := "/Users/jarjames/git/git-bisect/tests/test_react0.json"
 
+	var prob Problem
+
 	jsonFile, err := os.Open(filetotest)
 	if err != nil {
-		panic(err)
+		return prob, err
 	}
 	byteValue, err := ioutil.ReadAll(jsonFile)
 	if err != nil {
-		panic(err)
+		return prob, err
 	}
 
 	var file Root
 
-	json.Unmarshal([]byte(byteValue), &file)
+	err = json.Unmarshal([]byte(byteValue), &file)
 	if err != nil {
-		panic(err)
+		return prob, err
 	}
 
 	TheKnowledge = file.Solutions
 
-	return file.Problem
+	return file.Problem, nil
 }
