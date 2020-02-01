@@ -53,6 +53,7 @@ func contains(s []string, e string) bool {
 func ConnectJSON() Problem {
 	// filetotest := "/Users/jarjames/git/git-bisect/tests/test_linux0.json"
 	filetotest := "/Users/jarjames/git/git-bisect/tests/test_bootstrap0.json"
+	// filetotest := "/Users/jarjames/git/git-bisect/tests/test_react0.json"
 
 	jsonFile, err := os.Open(filetotest)
 	if err != nil {
