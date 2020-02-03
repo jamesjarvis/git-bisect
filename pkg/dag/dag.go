@@ -3,6 +3,9 @@ package dag
 
 import (
 	"fmt"
+	"log"
+	"math"
+	"runtime"
 	"sync"
 )
 
@@ -731,11 +734,6 @@ func getFirstElementFromMap(m map[string]bool) string {
 	return temp
 }
 
-// GetMidPoint literally just returns the midpoint
-func (d *DAG) GetMidPoint() string {
-	return getFirstElementFromMap(d.GetVertices())
-}
-
 // BadCommit takes the "bad" commit, changes the dag, returning an error if required
 // New dag should be it and it's ancestors
 func (d *DAG) BadCommit(c string) error {
@@ -773,4 +771,55 @@ func contains(s []string, e string) bool {
 		}
 	}
 	return false
+}
+
+// CommitAncestors is the
+type CommitAncestors struct {
+	Commit       string
+	NumAncestors float64
+}
+
+// GetMidPoint literally just returns the midpoint
+func (d *DAG) GetMidPoint() string {
+	// numAncestors := make(map[string]int)
+	var maxValue CommitAncestors
+	vertices := d.GetVertices()
+	numJobs := len(vertices)
+
+	jobs := make(chan string, numJobs)
+	results := make(chan *CommitAncestors, numJobs)
+
+	// We want to spawn some workers, who have a recieving commit channel, and send back results to a channel.
+
+	for w := 1; w <= runtime.GOMAXPROCS(0); w++ {
+		go worker(w, d, jobs, results)
+	}
+
+	for j := range vertices {
+		jobs <- j
+	}
+	close(jobs)
+
+	for a := 1; a <= numJobs; a++ {
+		result := <-results
+		result.NumAncestors = math.Min(float64(result.NumAncestors), float64(numJobs)-float64(result.NumAncestors))
+		if result.NumAncestors > maxValue.NumAncestors {
+			maxValue = *result
+		}
+	}
+
+	return maxValue.Commit
+}
+
+func worker(id int, d *DAG, jobs <-chan string, results chan<- *CommitAncestors) {
+	for j := range jobs {
+		ancs, err := d.GetOrderedAncestors(j)
+		if err != nil {
+			log.Fatal(err)
+		}
+		results <- &CommitAncestors{
+			Commit:       j,
+			NumAncestors: float64(len(ancs)),
+		}
+	}
 }
