@@ -65,15 +65,11 @@ THEN AFTER BAD:
 // The elements are literally just strings, because there is no reason for them not to be
 // The parent relations are stored in "inboundEdge", with a map of the children to map of parents
 type DAG struct {
-	muDAG        sync.RWMutex
-	vertices     map[string]bool
-	inboundEdge  map[string]map[string]bool
-	outboundEdge map[string]map[string]bool
-	muCache      sync.RWMutex
-	// verticesLocked *dMutex
-	// ancestorsCache map[string]map[string]bool
-	// visited       map[string]bool
-	// visitedLock   sync.RWMutex
+	muDAG         sync.RWMutex
+	vertices      map[string]bool
+	inboundEdge   map[string]map[string]bool
+	outboundEdge  map[string]map[string]bool
+	muCache       sync.RWMutex
 	MidPoint      string
 	MostRecentBad string
 }
@@ -84,9 +80,6 @@ func NewDAG() *DAG {
 		vertices:     make(map[string]bool),
 		inboundEdge:  make(map[string]map[string]bool),
 		outboundEdge: make(map[string]map[string]bool),
-		// verticesLocked: newDMutex(),
-		// ancestorsCache: make(map[string]map[string]bool),
-		// visited: make(map[string]bool),
 	}
 }
 
@@ -712,48 +705,18 @@ func (d *DAG) GoodCommit(c string) error {
 		return err
 	}
 
-	// d.MidPoint = ances[len(ances)/2]
+	// Delete ancestors
 	for _, result := range ances {
 		err = d.DeleteVertex(result)
 		if err != nil {
 			return err
 		}
 	}
+	// Delete itself
 	err = d.DeleteVertex(c)
 	if err != nil {
 		return err
 	}
-
-	// WORK OUT A MIDPOINT
-
-	// leaves := d.GetLeafs()
-
-	// max := 0
-	// maxCom := getFirstElementFromMap(leaves)
-	// for leaf := range leaves {
-	// 	maxAnces, err := d.GetOrderedAncestors(leaf)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	tempLen := len(maxAnces)
-	// 	if tempLen > max {
-	// 		max = tempLen
-	// 		maxCom = leaf
-	// 	}
-	// }
-
-	// tempAnces, err := d.GetOrderedAncestors(maxCom)
-	// if err != nil {
-	// 	return err
-	// }
-	// if len(tempAnces) == 0 {
-	// 	// log.Println(d.GetVertices())
-	// 	d.MidPoint = getFirstElementFromMap(d.GetVertices())
-	// } else if len(tempAnces) == 1 {
-	// 	d.MidPoint = tempAnces[0]
-	// } else {
-	// 	d.MidPoint = tempAnces[(len(tempAnces))/2]
-	// }
 
 	d.MidPoint = d.GetMidPoint()
 
@@ -784,25 +747,13 @@ func (d *DAG) BadCommit(c string) error {
 		return err
 	}
 
-	// ances = append(ances, c)
-
-	// // d.MidPoint = getFirstElementFromMap(d.GetVertices())
-
-	// if len(ances) == 0 {
-	// 	// This is an issue, since it
-	// 	// log.Println(d.GetVertices())
-	// 	// d.MidPoint = getFirstElementFromMap(d.GetVertices())
-	// } else if len(ances) == 1 {
-	// 	d.MidPoint = ances[0]
-	// } else {
-	// 	d.MidPoint = ances[len(ances)/2]
-	// }
-
+	// Get the vertices to remove
 	verticesToRemove := d.GetVertices()
 	for _, val := range ances {
 		delete(verticesToRemove, val)
 	}
 
+	// Remove vertices we don't like any more
 	for vertexToRemove := range verticesToRemove {
 		err = d.DeleteVertex(vertexToRemove)
 		if err != nil {
@@ -810,42 +761,7 @@ func (d *DAG) BadCommit(c string) error {
 		}
 	}
 
-	// tempParents := copyBigMap(d.outboundEdge)
-
-	// d.vertices = make(map[string]bool)
-	// d.inboundEdge = make(map[string]map[string]bool)
-	// d.outboundEdge = make(map[string]map[string]bool)
-
-	// for _, val := range ances {
-	// 	// Get previous parent list
-	// 	thing, ok := tempParents[val]
-	// 	if !ok {
-	// 		return fmt.Errorf("Commit (%v) does not exist??", val)
-	// 	}
-
-	// 	// Add the parents again
-	// 	for parentOF := range thing {
-	// 		d.AddEdge(val, parentOF)
-	// 	}
-
-	// }
-
 	d.MidPoint = d.GetMidPoint()
-
-	// // loop through ancestors
-	// for _, val := range ances {
-	// 	// Get previous child list
-	// 	thing, ok := tempParents[val]
-	// 	if !ok {
-	// 		return fmt.Errorf("Commit (%v) does not exist??", val)
-	// 	}
-	// 	// Only if the previous children contains an ancestor does it get added again
-	// 	for commit := range thing {
-	// 		if contains(ances, commit) {
-	// 			d.AddEdge(val, commit)
-	// 		}
-	// 	}
-	// }
 
 	return nil
 }
