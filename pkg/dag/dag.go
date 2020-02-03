@@ -784,6 +784,8 @@ func (d *DAG) BadCommit(c string) error {
 		return err
 	}
 
+	// ances = append(ances, c)
+
 	// // d.MidPoint = getFirstElementFromMap(d.GetVertices())
 
 	// if len(ances) == 0 {
@@ -796,25 +798,37 @@ func (d *DAG) BadCommit(c string) error {
 	// 	d.MidPoint = ances[len(ances)/2]
 	// }
 
-	tempParents := copyBigMap(d.outboundEdge)
-
-	d.vertices = make(map[string]bool)
-	d.inboundEdge = make(map[string]map[string]bool)
-	d.outboundEdge = make(map[string]map[string]bool)
-
+	verticesToRemove := d.GetVertices()
 	for _, val := range ances {
-		// Get previous parent list
-		thing, ok := tempParents[val]
-		if !ok {
-			return fmt.Errorf("Commit (%v) does not exist??", val)
-		}
-
-		// Add the parents again
-		for parentOF := range thing {
-			d.AddEdge(val, parentOF)
-		}
-
+		delete(verticesToRemove, val)
 	}
+
+	for vertexToRemove := range verticesToRemove {
+		err = d.DeleteVertex(vertexToRemove)
+		if err != nil {
+			return err
+		}
+	}
+
+	// tempParents := copyBigMap(d.outboundEdge)
+
+	// d.vertices = make(map[string]bool)
+	// d.inboundEdge = make(map[string]map[string]bool)
+	// d.outboundEdge = make(map[string]map[string]bool)
+
+	// for _, val := range ances {
+	// 	// Get previous parent list
+	// 	thing, ok := tempParents[val]
+	// 	if !ok {
+	// 		return fmt.Errorf("Commit (%v) does not exist??", val)
+	// 	}
+
+	// 	// Add the parents again
+	// 	for parentOF := range thing {
+	// 		d.AddEdge(val, parentOF)
+	// 	}
+
+	// }
 
 	d.MidPoint = d.GetMidPoint()
 
