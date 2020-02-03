@@ -3,6 +3,7 @@ package bisect
 import (
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"os"
 )
 
@@ -29,6 +30,12 @@ func AskQuestionJSON(s Solutions, q Question) Answer {
 
 // SubmitSolutionJSON is the "endpoint" where you can submit a solution and retrieve your score
 func SubmitSolutionJSON(s Solutions, attempt Solution) Score {
+	if contains(s.AllBad, attempt.Solution) {
+		log.Printf("(%v) is indeed BAD", attempt.Solution)
+	} else {
+		log.Printf("(%v) is actually GOOD", attempt.Solution)
+	}
+
 	if s.Bug != attempt.Solution {
 		return Score{
 			Score: -1,
@@ -38,6 +45,11 @@ func SubmitSolutionJSON(s Solutions, attempt Solution) Score {
 	return Score{
 		Score: Count,
 	}
+}
+
+// GetBug returns the bug
+func GetBug() string {
+	return TheKnowledge.Bug
 }
 
 func contains(s []string, e string) bool {
@@ -52,7 +64,8 @@ func contains(s []string, e string) bool {
 // ConnectJSON does a "connection" to the "server", but json
 func ConnectJSON() (Problem, error) {
 	// filetotest := "/Users/jarjames/git/git-bisect/tests/test_linux0.json"
-	filetotest := "/Users/jarjames/git/git-bisect/tests/test_bootstrap0.json"
+	// filetotest := "/Users/jarjames/git/git-bisect/tests/test_bootstrap0.json"
+	filetotest := "/Users/jarjames/git/git-bisect/tests/test_bootstrap10.json"
 	// filetotest := "/Users/jarjames/git/git-bisect/tests/test_react0.json"
 
 	var prob Problem

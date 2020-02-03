@@ -43,21 +43,37 @@ E -> B, A, C
 F -> C, A
 G -> D, B, A, E, C
 
+GOOD: B
+BAD: E
+ActualBAD: C
+
+AFTER GOOD:
+      C
+     / \
+D   E   F
+ \ /
+  G
+
+THEN AFTER BAD:
+      C
+       \
+        F
+
 */
 
 // DAG implements the data structure of the DAG.
 // The elements are literally just strings, because there is no reason for them not to be
 // The parent relations are stored in "inboundEdge", with a map of the children to map of parents
 type DAG struct {
-	muDAG          sync.RWMutex
-	vertices       map[string]bool
-	inboundEdge    map[string]map[string]bool
-	outboundEdge   map[string]map[string]bool
-	muCache        sync.RWMutex
-	verticesLocked *dMutex
+	muDAG        sync.RWMutex
+	vertices     map[string]bool
+	inboundEdge  map[string]map[string]bool
+	outboundEdge map[string]map[string]bool
+	muCache      sync.RWMutex
+	// verticesLocked *dMutex
 	// ancestorsCache map[string]map[string]bool
-	visited       map[string]bool
-	visitedLock   sync.RWMutex
+	// visited       map[string]bool
+	// visitedLock   sync.RWMutex
 	MidPoint      string
 	MostRecentBad string
 }
@@ -65,12 +81,12 @@ type DAG struct {
 // NewDAG creates / initializes a new DAG.
 func NewDAG() *DAG {
 	return &DAG{
-		vertices:       make(map[string]bool),
-		inboundEdge:    make(map[string]map[string]bool),
-		outboundEdge:   make(map[string]map[string]bool),
-		verticesLocked: newDMutex(),
+		vertices:     make(map[string]bool),
+		inboundEdge:  make(map[string]map[string]bool),
+		outboundEdge: make(map[string]map[string]bool),
+		// verticesLocked: newDMutex(),
 		// ancestorsCache: make(map[string]map[string]bool),
-		visited: make(map[string]bool),
+		// visited: make(map[string]bool),
 	}
 }
 
@@ -231,9 +247,11 @@ func (d *DAG) IsEdge(src string, dst string) (bool, error) {
 
 func (d *DAG) isEdge(src string, dst string) bool {
 
+	_, outboundExists := d.outboundEdge[src]
 	_, inboundExists := d.inboundEdge[dst]
 
-	return inboundExists && d.inboundEdge[dst][src]
+	return outboundExists && d.outboundEdge[src][dst] &&
+		inboundExists && d.inboundEdge[dst][src]
 }
 
 // DeleteEdge deletes an edge. DeleteEdge also deletes ancestor- and
@@ -280,7 +298,7 @@ func (d *DAG) GetSize() int {
 
 func (d *DAG) getSize() int {
 	count := 0
-	for _, value := range d.inboundEdge {
+	for _, value := range d.outboundEdge {
 		count += len(value)
 	}
 	return count
@@ -340,43 +358,43 @@ func (d *DAG) GetParents(v string) (map[string]bool, error) {
 	return copyMap(d.inboundEdge[v]), nil
 }
 
-// GetAncestorsSimple returns all ancestors of the vertex v, or an error if
-// v is nil or unknown
-func (d *DAG) GetAncestorsSimple(v string) (map[string]bool, error) {
-	d.muDAG.RLock()
-	defer d.muDAG.RUnlock()
-	if err := d.saneVertex(v); err != nil {
-		return nil, err
-	}
+// // GetAncestorsSimple returns all ancestors of the vertex v, or an error if
+// // v is nil or unknown
+// func (d *DAG) GetAncestorsSimple(v string) (map[string]bool, error) {
+// 	d.muDAG.RLock()
+// 	defer d.muDAG.RUnlock()
+// 	if err := d.saneVertex(v); err != nil {
+// 		return nil, err
+// 	}
 
-	// Reset Visited
-	d.visited = make(map[string]bool)
+// 	// Reset Visited
+// 	d.visited = make(map[string]bool)
 
-	d.getAncestorsSimple(&v)
+// 	d.getAncestorsSimple(&v)
 
-	return d.visited, nil
-}
+// 	return d.visited, nil
+// }
 
-func (d *DAG) getAncestorsSimple(v *string) bool {
-	d.visitedLock.Lock()
-	if _, visited := d.visited[*v]; visited {
-		d.visitedLock.Unlock()
-		return false
-	}
-	d.visited[*v] = true
-	d.visitedLock.Unlock()
+// func (d *DAG) getAncestorsSimple(v *string) bool {
+// 	d.visitedLock.Lock()
+// 	if _, visited := d.visited[*v]; visited {
+// 		d.visitedLock.Unlock()
+// 		return false
+// 	}
+// 	d.visited[*v] = true
+// 	d.visitedLock.Unlock()
 
-	if parents, ok := d.inboundEdge[*v]; ok {
+// 	if parents, ok := d.inboundEdge[*v]; ok {
 
-		// for each parent collect its ancestors
-		for parent := range parents {
-			// I'll be honest, I don't care about the output - the returns just kill the function quickly
-			d.getAncestorsSimple(&parent)
-		}
-		return true
-	}
-	return false
-}
+// 		// for each parent collect its ancestors
+// 		for parent := range parents {
+// 			// I'll be honest, I don't care about the output - the returns just kill the function quickly
+// 			d.getAncestorsSimple(&parent)
+// 		}
+// 		return true
+// 	}
+// 	return false
+// }
 
 // GetOrderedAncestors returns all ancestors of the vertex v in a breath-first
 // order. Only the first occurrence of each vertex is returned.
@@ -708,34 +726,36 @@ func (d *DAG) GoodCommit(c string) error {
 
 	// WORK OUT A MIDPOINT
 
-	leaves := d.GetLeafs()
+	// leaves := d.GetLeafs()
 
-	max := 0
-	maxCom := getFirstElementFromMap(leaves)
-	for leaf := range leaves {
-		maxAnces, err := d.GetOrderedAncestors(leaf)
-		if err != nil {
-			return err
-		}
-		tempLen := len(maxAnces)
-		if tempLen > max {
-			max = tempLen
-			maxCom = leaf
-		}
-	}
+	// max := 0
+	// maxCom := getFirstElementFromMap(leaves)
+	// for leaf := range leaves {
+	// 	maxAnces, err := d.GetOrderedAncestors(leaf)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	tempLen := len(maxAnces)
+	// 	if tempLen > max {
+	// 		max = tempLen
+	// 		maxCom = leaf
+	// 	}
+	// }
 
-	tempAnces, err := d.GetOrderedAncestors(maxCom)
-	if err != nil {
-		return err
-	}
-	if len(tempAnces) == 0 {
-		// log.Println(d.GetVertices())
-		d.MidPoint = getFirstElementFromMap(d.GetVertices())
-	} else if len(tempAnces) == 1 {
-		d.MidPoint = tempAnces[0]
-	} else {
-		d.MidPoint = tempAnces[(len(tempAnces))/2]
-	}
+	// tempAnces, err := d.GetOrderedAncestors(maxCom)
+	// if err != nil {
+	// 	return err
+	// }
+	// if len(tempAnces) == 0 {
+	// 	// log.Println(d.GetVertices())
+	// 	d.MidPoint = getFirstElementFromMap(d.GetVertices())
+	// } else if len(tempAnces) == 1 {
+	// 	d.MidPoint = tempAnces[0]
+	// } else {
+	// 	d.MidPoint = tempAnces[(len(tempAnces))/2]
+	// }
+
+	d.MidPoint = d.GetMidPoint()
 
 	return nil
 }
@@ -746,6 +766,11 @@ func getFirstElementFromMap(m map[string]bool) string {
 		return key
 	}
 	return temp
+}
+
+// GetMidPoint literally just returns the midpoint
+func (d *DAG) GetMidPoint() string {
+	return getFirstElementFromMap(d.GetVertices())
 }
 
 // BadCommit takes the "bad" commit, changes the dag, returning an error if required
@@ -759,14 +784,17 @@ func (d *DAG) BadCommit(c string) error {
 		return err
 	}
 
-	if len(ances) == 0 {
-		// log.Println(d.GetVertices())
-		d.MidPoint = getFirstElementFromMap(d.GetVertices())
-	} else if len(ances) == 1 {
-		d.MidPoint = ances[0]
-	} else {
-		d.MidPoint = ances[len(ances)/2]
-	}
+	// // d.MidPoint = getFirstElementFromMap(d.GetVertices())
+
+	// if len(ances) == 0 {
+	// 	// This is an issue, since it
+	// 	// log.Println(d.GetVertices())
+	// 	// d.MidPoint = getFirstElementFromMap(d.GetVertices())
+	// } else if len(ances) == 1 {
+	// 	d.MidPoint = ances[0]
+	// } else {
+	// 	d.MidPoint = ances[len(ances)/2]
+	// }
 
 	tempParents := copyBigMap(d.outboundEdge)
 
@@ -775,14 +803,35 @@ func (d *DAG) BadCommit(c string) error {
 	d.outboundEdge = make(map[string]map[string]bool)
 
 	for _, val := range ances {
+		// Get previous parent list
 		thing, ok := tempParents[val]
 		if !ok {
 			return fmt.Errorf("Commit (%v) does not exist??", val)
 		}
-		for commit := range thing {
-			d.AddEdge(val, commit)
+
+		// Add the parents again
+		for parentOF := range thing {
+			d.AddEdge(val, parentOF)
 		}
+
 	}
+
+	d.MidPoint = d.GetMidPoint()
+
+	// // loop through ancestors
+	// for _, val := range ances {
+	// 	// Get previous child list
+	// 	thing, ok := tempParents[val]
+	// 	if !ok {
+	// 		return fmt.Errorf("Commit (%v) does not exist??", val)
+	// 	}
+	// 	// Only if the previous children contains an ancestor does it get added again
+	// 	for commit := range thing {
+	// 		if contains(ances, commit) {
+	// 			d.AddEdge(val, commit)
+	// 		}
+	// 	}
+	// }
 
 	return nil
 }

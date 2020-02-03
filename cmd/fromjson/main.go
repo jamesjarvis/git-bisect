@@ -16,6 +16,8 @@ func main() {
 
 	log.Printf("Retrieved problem %v, parsing...", problem.Name)
 
+	// log.Printf("Length of json object %v\n", len(problem.Dag))
+
 	// dag := bisect.DagMapMaker(&problem)
 
 	// log.Printf("Problem: %v has %v commits with original map\n", problem.Name, len(dag))
@@ -48,7 +50,7 @@ func main() {
 
 	// // fmt.Printf("Problem: %v now has %v commits after BAD (%v)\n", problem.Name, len(dag), problem.Bad)
 
-	score := bisect.NextMove(newDag)
+	score := bisect.NextMove(newDag, bisect.GetBug())
 
 	log.Printf("Score for %v: %v\n", problem.Name, score.Score)
 }

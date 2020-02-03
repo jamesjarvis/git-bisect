@@ -64,8 +64,15 @@ import (
 // }
 
 // NextMove actually contains the logic
-func NextMove(d *dag.DAG) Score {
+func NextMove(d *dag.DAG, actualbug string) Score {
 	for {
+		log.Printf("%v vertices, %v edges\n", d.GetOrder(), d.GetSize())
+		exists, err := d.VertexExists(actualbug)
+		if err != nil {
+			log.Print(err)
+		}
+		log.Printf("(%v) exist in code? : %v\n", actualbug, exists)
+
 		// IF the length is 0, submit the last "badcommit"
 		if d.GetOrder() == 0 {
 			log.Printf("Submitting MOST RECENT (%v)\n", d.MostRecentBad)
@@ -74,35 +81,36 @@ func NextMove(d *dag.DAG) Score {
 			})
 		}
 
-		// IF the length is 1, submit the only one there
-		if d.GetOrder() == 1 {
-			submission := GetFirstElementFromMap(d.GetVertices())
-			log.Printf("Submitting LAST LEFT (%v)\n", submission)
-			return SubmitSolution(Solution{
-				Solution: submission,
-			})
+		// // IF the length is 1, submit the only one there
+		// if d.GetOrder() == 1 {
+		// 	submission := GetFirstElementFromMap(d.GetVertices())
+		// 	log.Printf("Submitting LAST LEFT (%v)\n", submission)
+		// 	return SubmitSolution(Solution{
+		// 		Solution: submission,
+		// 	})
+		// }
+
+		// midpoint := d.MidPoint
+		question := Question{
+			Question: d.MidPoint,
 		}
 
-		midpoint := d.MidPoint
-
 		// ELSE get midpoint and ask question
-		answer := AskQuestion(Question{
-			Question: midpoint,
-		})
+		answer := AskQuestion(question)
 
 		switch answer.Answer {
 		case "Good":
-			err := d.GoodCommit(midpoint)
+			err := d.GoodCommit(question.Question)
 			if err != nil {
 				log.Fatal(err)
 			}
-			log.Printf("Now %v commits after GOOD (%v)\n", d.GetOrder(), midpoint)
+			log.Printf("Now %v commits after GOOD (%v)\n", d.GetOrder(), question.Question)
 		case "Bad":
-			err := d.BadCommit(midpoint)
+			err := d.BadCommit(question.Question)
 			if err != nil {
 				log.Fatal(err)
 			}
-			log.Printf("Now %v commits after BAD (%v)\n", d.GetOrder(), midpoint)
+			log.Printf("Now %v commits after BAD (%v)\n", d.GetOrder(), question.Question)
 		}
 	}
 }
