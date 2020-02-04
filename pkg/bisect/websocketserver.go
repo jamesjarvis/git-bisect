@@ -18,8 +18,13 @@ type Authentication struct {
 	User string `json:"User"`
 }
 
+// Connection is the websocket connection
+type Connection struct {
+	ws *websocket.Conn
+}
+
 // ConnectWebsocket connects to the websocket server, and returns the problem
-func ConnectWebsocket() (*websocket.Conn, error) {
+func ConnectWebsocket() (*Connection, error) {
 	flag.Parse()
 	log.SetFlags(0)
 
@@ -35,11 +40,11 @@ func ConnectWebsocket() (*websocket.Conn, error) {
 	}
 	defer c.Close()
 
-	return c, nil
+	return &Connection{c}, nil
 }
 
 // GetProblemWebsocket simply returns the problem, given an authentication
-func GetProblemWebsocket(s *websocket.Conn, a Authentication) (Problem, error) {
+func (c *Connection) GetProblemWebsocket(a Authentication) (Problem, error) {
 	var prob Problem
 
 	jsona, err := json.Marshal(a)
@@ -47,12 +52,12 @@ func GetProblemWebsocket(s *websocket.Conn, a Authentication) (Problem, error) {
 		return prob, err
 	}
 
-	err = s.WriteMessage(websocket.TextMessage, jsona)
+	err = c.ws.WriteMessage(websocket.TextMessage, jsona)
 	if err != nil {
 		return prob, err
 	}
 
-	_, message, err := s.ReadMessage()
+	_, message, err := c.ws.ReadMessage()
 	if err != nil {
 		return prob, err
 	}
@@ -66,7 +71,7 @@ func GetProblemWebsocket(s *websocket.Conn, a Authentication) (Problem, error) {
 }
 
 // AskQuestionWebsocket asks a question about this particular commit to the server, and updates the count
-func AskQuestionWebsocket(s *websocket.Conn, q Question) (Answer, error) {
+func (c *Connection) AskQuestionWebsocket(q Question) (Answer, error) {
 	var ans Answer
 
 	jsonq, err := json.Marshal(q)
@@ -74,12 +79,12 @@ func AskQuestionWebsocket(s *websocket.Conn, q Question) (Answer, error) {
 		return ans, err
 	}
 
-	err = s.WriteMessage(websocket.TextMessage, jsonq)
+	err = c.ws.WriteMessage(websocket.TextMessage, jsonq)
 	if err != nil {
 		return ans, err
 	}
 
-	_, message, err := s.ReadMessage()
+	_, message, err := c.ws.ReadMessage()
 	if err != nil {
 		return ans, err
 	}
@@ -94,7 +99,7 @@ func AskQuestionWebsocket(s *websocket.Conn, q Question) (Answer, error) {
 
 // SubmitSolutionWebsocket is the "endpoint" where you can submit a solution
 // It can either return a score, or
-func SubmitSolutionWebsocket(s *websocket.Conn, attempt Solution) (Score, Problem, error) {
+func (c *Connection) SubmitSolutionWebsocket(attempt Solution) (Score, Problem, error) {
 	var scor Score
 	var prob Problem
 
@@ -103,12 +108,12 @@ func SubmitSolutionWebsocket(s *websocket.Conn, attempt Solution) (Score, Proble
 		return scor, prob, err
 	}
 
-	err = s.WriteMessage(websocket.TextMessage, jsonq)
+	err = c.ws.WriteMessage(websocket.TextMessage, jsonq)
 	if err != nil {
 		return scor, prob, err
 	}
 
-	_, message, err := s.ReadMessage()
+	_, message, err := c.ws.ReadMessage()
 	if err != nil {
 		return scor, prob, err
 	}
