@@ -907,48 +907,12 @@ func (d *DAG) GetMidPoint() (string, error) {
 		return d.GetEstimateMidpointAgain()
 	}
 
-	// // Get NumAncestors for each vertex
-	// numAncestors := d.PopulateAncestors()
-	// vertices := d.GetVertices()
-	// numVertices := len(vertices)
-
-	// var maxValue CommitAncestors
-
-	// // Then get the max heuristic result
-	// for commit, ancestors := range numAncestors {
-	// 	// log.Printf("(%v): %v", commit, ancestors)
-	// 	temp := math.Min(float64(ancestors), float64(numVertices)-float64(ancestors))
-	// 	if temp > maxValue.Value {
-	// 		maxValue = CommitAncestors{
-	// 			Commit: commit,
-	// 			Value:  temp,
-	// 		}
-	// 	}
-	// }
-
-	// actualAncestors, err := d.GetOrderedAncestors(maxValue.Commit)
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// log.Printf("Midpoint (%v) supposedly has %v ancestors, actually has %v", maxValue.Commit, numAncestors[maxValue.Commit], len(actualAncestors))
-
-	// numAncestors := make(map[string]int)
 	var maxValue CommitAncestors
-	// vertices := d.GetVertices()
 
 	temp := make(map[string]bool)
 
-	// for key, thing := range d.inboundEdge {
-	// 	if len(thing) > 1 {
-	// 		temp[key] = true
-	// 	}
-	// }
-
 	for key, _ := range d.inboundEdge {
-		// if len(thing) > 1 {
 		temp[key] = true
-		// }
 	}
 
 	numJobs := len(temp)
@@ -962,26 +926,14 @@ func (d *DAG) GetMidPoint() (string, error) {
 		go worker(w, d, jobs, results)
 	}
 
-	// log.Println("Created all workers")
-
 	for j := range temp {
-		// if len(thing) > 1 {
 		jobs <- j
-		// }
 	}
 
 	close(jobs)
-	// log.Println("Submitted all jobs")
 
 	for a := 1; a <= numJobs; a++ {
 		result := <-results
-		// log.Printf("(%v) has %v ancestors", result.Commit, result.Value)
-
-		// if result.Value == float64(numJobs/2) {
-		// 	// close(results)
-		// 	return result.Commit, nil
-		// }
-
 		result.Value = math.Min(float64(result.Value), float64(numJobs)-float64(result.Value))
 		if result.Value >= maxValue.Value {
 			maxValue = result

@@ -25,12 +25,6 @@ func main() {
 
 	log.Printf("Retrieved problem %v, parsing...", problem.Name)
 
-	// log.Printf("Length of json object %v\n", len(problem.Dag))
-
-	// dag := bisect.DagMapMaker(&problem)
-
-	// log.Printf("Problem: %v has %v commits with original map\n", problem.Name, len(dag))
-
 	newDag := bisect.DAGMaker(&problem)
 
 	log.Printf("Problem: %v has %v vertexes (commits) and %v edges with new dag map\n", problem.Name, newDag.GetOrder(), newDag.GetSize())
@@ -49,16 +43,6 @@ func main() {
 
 	log.Printf("Problem: %v now has %v commits after BAD (%v)\n", problem.Name, newDag.GetOrder(), problem.Bad)
 
-	// bisect.GoodCommitNew(newDag, problem.Good)
-
-	// dag = bisect.GoodCommit(dag, problem.Good)
-
-	// // fmt.Printf("Problem: %v now has %v commits after GOOD (%v)\n", problem.Name, len(dag), problem.Good)
-
-	// dag = bisect.BadCommit(dag, problem.Bad)
-
-	// // fmt.Printf("Problem: %v now has %v commits after BAD (%v)\n", problem.Name, len(dag), problem.Bad)
-
 	score, err := conn.NextMove(newDag)
 	if err != nil {
 		log.Fatal(err)
@@ -66,7 +50,11 @@ func main() {
 
 	log.Print("SCORES ON THE DOORS")
 
+	totalScore := 0
 	for name, scor := range score.Score {
+		totalScore += scor
 		log.Printf("%v had a score of %v", name, scor)
 	}
+	log.Printf("Total score: %v", totalScore)
+
 }
