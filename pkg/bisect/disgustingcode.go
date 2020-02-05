@@ -36,6 +36,11 @@ func (d *DAGEntry) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// Problemcontainer is the problem container
+type Problemcontainer struct {
+	Problem Problem `json:"Problem"`
+}
+
 // Problem is the problem section of the json
 type Problem struct {
 	Name string     `json:"name"`

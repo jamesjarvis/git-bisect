@@ -1,18 +1,24 @@
 package main
 
 import (
+	"flag"
 	"log"
+	"net/url"
 
 	bisect "github.com/jamesjarvis/git-bisect/pkg/bisect"
 )
 
 func main() {
-	log.Printf("Connecting to problem server 🤖\n")
+	var addr = flag.String("addr", "129.12.44.229:1234", "http service address")
+	u := url.URL{Scheme: "ws", Host: *addr, Path: "/"}
 
-	conn, err := bisect.ConnectWebsocket()
+	log.Printf("Connecting to problem server (%v) 🤖\n", u.String())
+
+	conn, err := bisect.ConnectWebsocket(u)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer conn.WS.Close()
 
 	log.Println("Connected to websocket 🤖✅")
 
@@ -21,14 +27,11 @@ func main() {
 	}
 
 	problem, err := conn.GetProblemWebsocket(auth)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	log.Printf("Retrieved problem %v, parsing...", problem.Name)
-
-	// log.Printf("Length of json object %v\n", len(problem.Dag))
-
-	// dag := bisect.DagMapMaker(&problem)
-
-	// log.Printf("Problem: %v has %v commits with original map\n", problem.Name, len(dag))
 
 	newDag := bisect.DAGMaker(&problem)
 
@@ -48,17 +51,17 @@ func main() {
 
 	log.Printf("Problem: %v now has %v commits after BAD (%v)\n", problem.Name, newDag.GetOrder(), problem.Bad)
 
-	// bisect.GoodCommitNew(newDag, problem.Good)
+	score, err := conn.NextMoveWebsocket(newDag)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// dag = bisect.GoodCommit(dag, problem.Good)
+	log.Print("SCORES ON THE DOORS")
 
-	// // fmt.Printf("Problem: %v now has %v commits after GOOD (%v)\n", problem.Name, len(dag), problem.Good)
-
-	// dag = bisect.BadCommit(dag, problem.Bad)
-
-	// // fmt.Printf("Problem: %v now has %v commits after BAD (%v)\n", problem.Name, len(dag), problem.Bad)
-
-	score := bisect.NextMove(newDag, bisect.GetBug())
-
-	log.Printf("Score for %v: %v\n", problem.Name, score.Score)
+	totalScore := 0
+	for name, scor := range score.Score {
+		totalScore += scor
+		log.Printf("%v had a score of %v", name, scor)
+	}
+	log.Printf("Total score: %v", totalScore)
 }

@@ -85,3 +85,17 @@ The server now continues by either presenting a new problem instance, or by prov
 If the solution was correct, the raw score is simply the number of questions asked; if the solution was incorrect, the raw score will be the special value null.
 
 Observe that, from the problem instance, we already know that c is bad, so the second question asked by the client is redundant: this problem instance can be solved with just one question!
+
+## RUN LOCALLY
+
+The actual submission was made using websockets, but since that server is probably down by the time you read this, there is a local version to test.
+
+Simply run:
+
+```bash
+go run cmd/fromjson/main.go tests/
+```
+
+And this should run for a while and eventually output your results.
+
+FYI: this was optimised for multiprocessing, so the more CPU's you chuck at this thing, the better it gets.

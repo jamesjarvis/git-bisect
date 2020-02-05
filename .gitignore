@@ -19,3 +19,5 @@ tests/
 
 __debug_bin
 .DS_Store
+main
+websockets

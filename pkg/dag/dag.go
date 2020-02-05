@@ -671,72 +671,72 @@ func (e SrcDstEqualError) Error() string {
 ********** dMutex **********
 ****************************/
 
-type cMutex struct {
-	mutex sync.Mutex
-	count int
-}
+// type cMutex struct {
+// 	mutex sync.Mutex
+// 	count int
+// }
 
-// Structure for dynamic mutexes.
-type dMutex struct {
-	mutexes     map[interface{}]*cMutex
-	globalMutex sync.Mutex
-}
+// // Structure for dynamic mutexes.
+// type dMutex struct {
+// 	mutexes     map[interface{}]*cMutex
+// 	globalMutex sync.Mutex
+// }
 
-// Initialize a new dynamic mutex structure.
-func newDMutex() *dMutex {
-	return &dMutex{
-		mutexes: make(map[interface{}]*cMutex),
-	}
-}
+// // Initialize a new dynamic mutex structure.
+// func newDMutex() *dMutex {
+// 	return &dMutex{
+// 		mutexes: make(map[interface{}]*cMutex),
+// 	}
+// }
 
-// Get a lock for instance i
-func (d *dMutex) lock(i interface{}) {
+// // Get a lock for instance i
+// func (d *dMutex) lock(i interface{}) {
 
-	// acquire global lock
-	d.globalMutex.Lock()
+// 	// acquire global lock
+// 	d.globalMutex.Lock()
 
-	// if there is no cMutex for i, create it
-	if _, ok := d.mutexes[i]; !ok {
-		d.mutexes[i] = new(cMutex)
-	}
+// 	// if there is no cMutex for i, create it
+// 	if _, ok := d.mutexes[i]; !ok {
+// 		d.mutexes[i] = new(cMutex)
+// 	}
 
-	// increase the count in order to show, that we are interested in this
-	// instance mutex (thus now one deletes it)
-	d.mutexes[i].count++
+// 	// increase the count in order to show, that we are interested in this
+// 	// instance mutex (thus now one deletes it)
+// 	d.mutexes[i].count++
 
-	// remember the mutex for later
-	mutex := &d.mutexes[i].mutex
+// 	// remember the mutex for later
+// 	mutex := &d.mutexes[i].mutex
 
-	// as the cMutex is there, we have increased the count and we know the
-	// instance mutex, we can release the global lock
-	d.globalMutex.Unlock()
+// 	// as the cMutex is there, we have increased the count and we know the
+// 	// instance mutex, we can release the global lock
+// 	d.globalMutex.Unlock()
 
-	// and wait on the instance mutex
-	(*mutex).Lock()
-}
+// 	// and wait on the instance mutex
+// 	(*mutex).Lock()
+// }
 
-// Release the lock for instance i.
-func (d *dMutex) unlock(i interface{}) {
+// // Release the lock for instance i.
+// func (d *dMutex) unlock(i interface{}) {
 
-	// acquire global lock
-	d.globalMutex.Lock()
+// 	// acquire global lock
+// 	d.globalMutex.Lock()
 
-	// unlock instance mutex
-	d.mutexes[i].mutex.Unlock()
+// 	// unlock instance mutex
+// 	d.mutexes[i].mutex.Unlock()
 
-	// decrease the count, as we are no longer interested in this instance
-	// mutex
-	d.mutexes[i].count--
+// 	// decrease the count, as we are no longer interested in this instance
+// 	// mutex
+// 	d.mutexes[i].count--
 
-	// if we where the last one interested in this instance mutex delete the
-	// cMutex
-	if d.mutexes[i].count == 0 {
-		delete(d.mutexes, i)
-	}
+// 	// if we where the last one interested in this instance mutex delete the
+// 	// cMutex
+// 	if d.mutexes[i].count == 0 {
+// 		delete(d.mutexes, i)
+// 	}
 
-	// release the global lock
-	d.globalMutex.Unlock()
-}
+// 	// release the global lock
+// 	d.globalMutex.Unlock()
+// }
 
 // ADDITIONAL STUFF
 
@@ -762,18 +762,16 @@ func (d *DAG) GoodCommit(c string) error {
 		return err
 	}
 
-	// d.MidPoint = d.GetMidPoint()
-
 	return nil
 }
 
-func getFirstElementFromMap(m map[string]bool) string {
-	var temp string
-	for key := range m {
-		return key
-	}
-	return temp
-}
+// func getFirstElementFromMap(m map[string]bool) string {
+// 	var temp string
+// 	for key := range m {
+// 		return key
+// 	}
+// 	return temp
+// }
 
 // BadCommit takes the "bad" commit, changes the dag, returning an error if required
 // New dag should be it and it's ancestors
@@ -800,19 +798,17 @@ func (d *DAG) BadCommit(c string) error {
 		}
 	}
 
-	// d.MidPoint = d.GetMidPoint()
-
 	return nil
 }
 
-func contains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
-}
+// func contains(s []string, e string) bool {
+// 	for _, a := range s {
+// 		if a == e {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
 
 // CommitAncestors is the
 type CommitAncestors struct {
@@ -820,43 +816,43 @@ type CommitAncestors struct {
 	Value  float64
 }
 
-// GetEstimateMidpoint gets a rough midpoint just based on the middle commit in the graph??
-func (d *DAG) GetEstimateMidpoint() (string, error) {
-	leafs := d.GetLeafs()
-	var maxValue CommitAncestors
-	total := len(d.GetVertices())
+// // GetEstimateMidpoint gets a rough midpoint just based on the middle commit in the graph??
+// func (d *DAG) GetEstimateMidpoint() (string, error) {
+// 	leafs := d.GetLeafs()
+// 	var maxValue CommitAncestors
+// 	total := len(d.GetVertices())
 
-	// for every leaf
-	for leaf := range leafs {
-		// Get the ordered ancestors of this shit
-		ancestors, err := d.GetOrderedAncestors(leaf)
-		if err != nil {
-			return "", err
-		}
-		// Get the middle of it
-		anc := ancestors[len(ancestors)/2]
+// 	// for every leaf
+// 	for leaf := range leafs {
+// 		// Get the ordered ancestors of this shit
+// 		ancestors, err := d.GetOrderedAncestors(leaf)
+// 		if err != nil {
+// 			return "", err
+// 		}
+// 		// Get the middle of it
+// 		anc := ancestors[len(ancestors)/2]
 
-		// Get the length of ancestors of THAT
-		tempAnc, err := d.GetOrderedAncestors(anc)
-		if err != nil {
-			return "", nil
-		}
-		lenAncestors := len(tempAnc)
+// 		// Get the length of ancestors of THAT
+// 		tempAnc, err := d.GetOrderedAncestors(anc)
+// 		if err != nil {
+// 			return "", nil
+// 		}
+// 		lenAncestors := len(tempAnc)
 
-		// Then get the heuristic of that
-		heuristic := math.Min(float64(lenAncestors), float64(total)-float64(lenAncestors))
+// 		// Then get the heuristic of that
+// 		heuristic := math.Min(float64(lenAncestors), float64(total)-float64(lenAncestors))
 
-		// result.Value = math.Min(float64(result.Value), float64(numJobs)-float64(result.Value))
-		if heuristic > maxValue.Value {
-			maxValue = CommitAncestors{
-				Commit: anc,
-				Value:  heuristic,
-			}
-		}
-	}
+// 		// result.Value = math.Min(float64(result.Value), float64(numJobs)-float64(result.Value))
+// 		if heuristic > maxValue.Value {
+// 			maxValue = CommitAncestors{
+// 				Commit: anc,
+// 				Value:  heuristic,
+// 			}
+// 		}
+// 	}
 
-	return maxValue.Commit, nil
-}
+// 	return maxValue.Commit, nil
+// }
 
 // GetEstimateMidpointAgain gets a rough midpoint just based on the middle commit in the graph??
 func (d *DAG) GetEstimateMidpointAgain() (string, error) {
@@ -871,8 +867,6 @@ func (d *DAG) GetEstimateMidpointAgain() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		// Get the middle of it
-		// anc := ancestors[len(ancestors)/2]
 
 		increment := len(ancestors) / 15
 		for i := increment; i < len(ancestors)-increment; i += increment {
@@ -887,7 +881,6 @@ func (d *DAG) GetEstimateMidpointAgain() (string, error) {
 			// Then get the heuristic of that
 			heuristic := math.Min(float64(lenAncestors), float64(total)-float64(lenAncestors))
 
-			// result.Value = math.Min(float64(result.Value), float64(numJobs)-float64(result.Value))
 			if heuristic > maxValue.Value {
 				maxValue = CommitAncestors{
 					Commit: ancestors[i],
