@@ -355,44 +355,6 @@ func (d *DAG) GetParents(v string) (map[string]bool, error) {
 	return copyMap(d.inboundEdge[v]), nil
 }
 
-// // GetAncestorsSimple returns all ancestors of the vertex v, or an error if
-// // v is nil or unknown
-// func (d *DAG) GetAncestorsSimple(v string) (map[string]bool, error) {
-// 	d.muDAG.RLock()
-// 	defer d.muDAG.RUnlock()
-// 	if err := d.saneVertex(v); err != nil {
-// 		return nil, err
-// 	}
-
-// 	// Reset Visited
-// 	d.visited = make(map[string]bool)
-
-// 	d.getAncestorsSimple(&v)
-
-// 	return d.visited, nil
-// }
-
-// func (d *DAG) getAncestorsSimple(v *string) bool {
-// 	d.visitedLock.Lock()
-// 	if _, visited := d.visited[*v]; visited {
-// 		d.visitedLock.Unlock()
-// 		return false
-// 	}
-// 	d.visited[*v] = true
-// 	d.visitedLock.Unlock()
-
-// 	if parents, ok := d.inboundEdge[*v]; ok {
-
-// 		// for each parent collect its ancestors
-// 		for parent := range parents {
-// 			// I'll be honest, I don't care about the output - the returns just kill the function quickly
-// 			d.getAncestorsSimple(&parent)
-// 		}
-// 		return true
-// 	}
-// 	return false
-// }
-
 // GetOrderedAncestors returns all ancestors of the vertex v in a breath-first
 // order. Only the first occurrence of each vertex is returned.
 // GetOrderedAncestors returns an error, if v is nil or unknown.
@@ -466,46 +428,6 @@ func (d *DAG) walkAncestors(v string, vertices chan string, signal chan bool) {
 		}
 	}
 }
-
-// // PopulateAncestors returns the vertices, with the count of ancestors for each one
-// func (d *DAG) PopulateAncestors() map[string]int {
-// 	count := 0
-// 	for _, thing := range d.inboundEdge {
-// 		if len(thing) > 1 {
-// 			count++
-// 		}
-// 	}
-
-// 	fmt.Printf("Number of branched vertexes: %v", count)
-
-// 	d.numAncestorsCache = make(map[string]int)
-// 	for root := range d.GetRoots() {
-// 		d.muCache.Lock()
-// 		d.walkFromRoot(root, 0)
-// 		d.muCache.Unlock()
-// 		log.Print("Found all descendants of a root")
-// 	}
-// 	return d.numAncestorsCache
-// }
-
-// func (d *DAG) walkFromRoot(startVertex string, startCount int) {
-// 	children := d.outboundEdge[startVertex]
-// 	_, ok := d.numAncestorsCache[startVertex]
-// 	if len(children) > 1 {
-// 		if ok {
-// 			d.numAncestorsCache[startVertex] = d.numAncestorsCache[startVertex] + startCount
-// 		} else {
-// 			d.numAncestorsCache[startVertex] = startCount
-// 		}
-// 	}
-// 	for child := range children {
-// 		if ok {
-// 			d.walkFromRoot(child, startCount)
-// 		} else {
-// 			d.walkFromRoot(child, startCount+1)
-// 		}
-// 	}
-// }
 
 // String return a textual representation of the graph.
 func (d *DAG) String() string {
@@ -667,77 +589,6 @@ func (e SrcDstEqualError) Error() string {
 	return fmt.Sprintf("src ('%s') and dst ('%s') equal", e.src, e.dst)
 }
 
-/***************************
-********** dMutex **********
-****************************/
-
-// type cMutex struct {
-// 	mutex sync.Mutex
-// 	count int
-// }
-
-// // Structure for dynamic mutexes.
-// type dMutex struct {
-// 	mutexes     map[interface{}]*cMutex
-// 	globalMutex sync.Mutex
-// }
-
-// // Initialize a new dynamic mutex structure.
-// func newDMutex() *dMutex {
-// 	return &dMutex{
-// 		mutexes: make(map[interface{}]*cMutex),
-// 	}
-// }
-
-// // Get a lock for instance i
-// func (d *dMutex) lock(i interface{}) {
-
-// 	// acquire global lock
-// 	d.globalMutex.Lock()
-
-// 	// if there is no cMutex for i, create it
-// 	if _, ok := d.mutexes[i]; !ok {
-// 		d.mutexes[i] = new(cMutex)
-// 	}
-
-// 	// increase the count in order to show, that we are interested in this
-// 	// instance mutex (thus now one deletes it)
-// 	d.mutexes[i].count++
-
-// 	// remember the mutex for later
-// 	mutex := &d.mutexes[i].mutex
-
-// 	// as the cMutex is there, we have increased the count and we know the
-// 	// instance mutex, we can release the global lock
-// 	d.globalMutex.Unlock()
-
-// 	// and wait on the instance mutex
-// 	(*mutex).Lock()
-// }
-
-// // Release the lock for instance i.
-// func (d *dMutex) unlock(i interface{}) {
-
-// 	// acquire global lock
-// 	d.globalMutex.Lock()
-
-// 	// unlock instance mutex
-// 	d.mutexes[i].mutex.Unlock()
-
-// 	// decrease the count, as we are no longer interested in this instance
-// 	// mutex
-// 	d.mutexes[i].count--
-
-// 	// if we where the last one interested in this instance mutex delete the
-// 	// cMutex
-// 	if d.mutexes[i].count == 0 {
-// 		delete(d.mutexes, i)
-// 	}
-
-// 	// release the global lock
-// 	d.globalMutex.Unlock()
-// }
-
 // ADDITIONAL STUFF
 
 // GoodCommit should take the "good" commit, change the dag, and return an error if exists
@@ -764,14 +615,6 @@ func (d *DAG) GoodCommit(c string) error {
 
 	return nil
 }
-
-// func getFirstElementFromMap(m map[string]bool) string {
-// 	var temp string
-// 	for key := range m {
-// 		return key
-// 	}
-// 	return temp
-// }
 
 // BadCommit takes the "bad" commit, changes the dag, returning an error if required
 // New dag should be it and it's ancestors
@@ -801,58 +644,11 @@ func (d *DAG) BadCommit(c string) error {
 	return nil
 }
 
-// func contains(s []string, e string) bool {
-// 	for _, a := range s {
-// 		if a == e {
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }
-
 // CommitAncestors is the
 type CommitAncestors struct {
 	Commit string
 	Value  float64
 }
-
-// // GetEstimateMidpoint gets a rough midpoint just based on the middle commit in the graph??
-// func (d *DAG) GetEstimateMidpoint() (string, error) {
-// 	leafs := d.GetLeafs()
-// 	var maxValue CommitAncestors
-// 	total := len(d.GetVertices())
-
-// 	// for every leaf
-// 	for leaf := range leafs {
-// 		// Get the ordered ancestors of this shit
-// 		ancestors, err := d.GetOrderedAncestors(leaf)
-// 		if err != nil {
-// 			return "", err
-// 		}
-// 		// Get the middle of it
-// 		anc := ancestors[len(ancestors)/2]
-
-// 		// Get the length of ancestors of THAT
-// 		tempAnc, err := d.GetOrderedAncestors(anc)
-// 		if err != nil {
-// 			return "", nil
-// 		}
-// 		lenAncestors := len(tempAnc)
-
-// 		// Then get the heuristic of that
-// 		heuristic := math.Min(float64(lenAncestors), float64(total)-float64(lenAncestors))
-
-// 		// result.Value = math.Min(float64(result.Value), float64(numJobs)-float64(result.Value))
-// 		if heuristic > maxValue.Value {
-// 			maxValue = CommitAncestors{
-// 				Commit: anc,
-// 				Value:  heuristic,
-// 			}
-// 		}
-// 	}
-
-// 	return maxValue.Commit, nil
-// }
 
 // GetEstimateMidpointAgain gets a rough midpoint just based on the middle commit in the graph??
 func (d *DAG) GetEstimateMidpointAgain() (string, error) {

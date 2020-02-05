@@ -91,11 +91,6 @@ func (c *ConnectionJSON) SubmitSolutionJSON(attempt Solution) (Score, Problem, e
 	return Score{}, newProblem, nil
 }
 
-// // GetBug returns the bug
-// func (c *ConnectionJSON) GetBug() string {
-// 	return TheKnowledge.Bug
-// }
-
 func contains(s []string, e string) bool {
 	for _, a := range s {
 		if a == e {
@@ -118,10 +113,6 @@ func filepathwalkdir(root string) ([]string, error) {
 
 // ConnectJSON does a "connection" to the "server", but json
 func ConnectJSON(dir string) (ConnectionJSON, error) {
-	// filetotest := "/Users/jarjames/git/git-bisect/tests/test_linux0.json"
-	// filetotest := "/Users/jarjames/git/git-bisect/tests/test_bootstrap0.json"
-	// filetotest := "/Users/jarjames/git/git-bisect/tests/test_bootstrap10.json"
-	// filetotest := "/Users/jarjames/git/git-bisect/tests/test_react0.json"
 
 	connection := ConnectionJSON{
 		Problems: make(map[string]attempt),

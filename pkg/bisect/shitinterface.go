@@ -149,17 +149,3 @@ func (c *Connection) NextMoveWebsocket(d *dag.DAG) (Score, error) {
 		}
 	}
 }
-
-// // AskQuestion asks a question about this particular commit to the server, and updates the count
-// func AskQuestion(q Question) Answer {
-// 	answer := AskQuestionJSON(TheKnowledge, q)
-
-// 	log.Printf("QUESTION: (%v) is (%v)", q.Question, answer.Answer)
-
-// 	return answer
-// }
-
-// // SubmitSolution is the "endpoint" where you can submit a solution and retrieve your score
-// func SubmitSolution(attempt Solution) Score {
-// 	return SubmitSolutionJSON(TheKnowledge, attempt)
-// }
