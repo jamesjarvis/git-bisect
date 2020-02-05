@@ -18,9 +18,13 @@ func NextMove(d *dag.DAG, actualbug string) Score {
 			})
 		}
 
-		// midpoint := d.MidPoint
+		midpoint, err := d.GetMidPoint()
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		question := Question{
-			Question: d.MidPoint,
+			Question: midpoint,
 		}
 
 		// ELSE get midpoint and ask question

@@ -68,21 +68,22 @@ THEN AFTER BAD:
 // The elements are literally just strings, because there is no reason for them not to be
 // The parent relations are stored in "inboundEdge", with a map of the children to map of parents
 type DAG struct {
-	muDAG         sync.RWMutex
-	vertices      map[string]bool
-	inboundEdge   map[string]map[string]bool
-	outboundEdge  map[string]map[string]bool
-	muCache       sync.RWMutex
-	MidPoint      string
-	MostRecentBad string
+	muDAG             sync.RWMutex
+	vertices          map[string]bool
+	inboundEdge       map[string]map[string]bool
+	outboundEdge      map[string]map[string]bool
+	numAncestorsCache map[string]int
+	muCache           sync.RWMutex
+	MostRecentBad     string
 }
 
 // NewDAG creates / initializes a new DAG.
 func NewDAG() *DAG {
 	return &DAG{
-		vertices:     make(map[string]bool),
-		inboundEdge:  make(map[string]map[string]bool),
-		outboundEdge: make(map[string]map[string]bool),
+		vertices:          make(map[string]bool),
+		inboundEdge:       make(map[string]map[string]bool),
+		outboundEdge:      make(map[string]map[string]bool),
+		numAncestorsCache: make(map[string]int),
 	}
 }
 
@@ -466,6 +467,46 @@ func (d *DAG) walkAncestors(v string, vertices chan string, signal chan bool) {
 	}
 }
 
+// // PopulateAncestors returns the vertices, with the count of ancestors for each one
+// func (d *DAG) PopulateAncestors() map[string]int {
+// 	count := 0
+// 	for _, thing := range d.inboundEdge {
+// 		if len(thing) > 1 {
+// 			count++
+// 		}
+// 	}
+
+// 	fmt.Printf("Number of branched vertexes: %v", count)
+
+// 	d.numAncestorsCache = make(map[string]int)
+// 	for root := range d.GetRoots() {
+// 		d.muCache.Lock()
+// 		d.walkFromRoot(root, 0)
+// 		d.muCache.Unlock()
+// 		log.Print("Found all descendants of a root")
+// 	}
+// 	return d.numAncestorsCache
+// }
+
+// func (d *DAG) walkFromRoot(startVertex string, startCount int) {
+// 	children := d.outboundEdge[startVertex]
+// 	_, ok := d.numAncestorsCache[startVertex]
+// 	if len(children) > 1 {
+// 		if ok {
+// 			d.numAncestorsCache[startVertex] = d.numAncestorsCache[startVertex] + startCount
+// 		} else {
+// 			d.numAncestorsCache[startVertex] = startCount
+// 		}
+// 	}
+// 	for child := range children {
+// 		if ok {
+// 			d.walkFromRoot(child, startCount)
+// 		} else {
+// 			d.walkFromRoot(child, startCount+1)
+// 		}
+// 	}
+// }
+
 // String return a textual representation of the graph.
 func (d *DAG) String() string {
 	result := fmt.Sprintf("DAG Vertices: %d - Edges: %d\n", d.GetOrder(), d.GetSize())
@@ -721,7 +762,7 @@ func (d *DAG) GoodCommit(c string) error {
 		return err
 	}
 
-	d.MidPoint = d.GetMidPoint()
+	// d.MidPoint = d.GetMidPoint()
 
 	return nil
 }
@@ -759,7 +800,7 @@ func (d *DAG) BadCommit(c string) error {
 		}
 	}
 
-	d.MidPoint = d.GetMidPoint()
+	// d.MidPoint = d.GetMidPoint()
 
 	return nil
 }
@@ -775,19 +816,145 @@ func contains(s []string, e string) bool {
 
 // CommitAncestors is the
 type CommitAncestors struct {
-	Commit       string
-	NumAncestors float64
+	Commit string
+	Value  float64
+}
+
+// GetEstimateMidpoint gets a rough midpoint just based on the middle commit in the graph??
+func (d *DAG) GetEstimateMidpoint() (string, error) {
+	leafs := d.GetLeafs()
+	var maxValue CommitAncestors
+	total := len(d.GetVertices())
+
+	// for every leaf
+	for leaf := range leafs {
+		// Get the ordered ancestors of this shit
+		ancestors, err := d.GetOrderedAncestors(leaf)
+		if err != nil {
+			return "", err
+		}
+		// Get the middle of it
+		anc := ancestors[len(ancestors)/2]
+
+		// Get the length of ancestors of THAT
+		tempAnc, err := d.GetOrderedAncestors(anc)
+		if err != nil {
+			return "", nil
+		}
+		lenAncestors := len(tempAnc)
+
+		// Then get the heuristic of that
+		heuristic := math.Min(float64(lenAncestors), float64(total)-float64(lenAncestors))
+
+		// result.Value = math.Min(float64(result.Value), float64(numJobs)-float64(result.Value))
+		if heuristic > maxValue.Value {
+			maxValue = CommitAncestors{
+				Commit: anc,
+				Value:  heuristic,
+			}
+		}
+	}
+
+	return maxValue.Commit, nil
+}
+
+// GetEstimateMidpointAgain gets a rough midpoint just based on the middle commit in the graph??
+func (d *DAG) GetEstimateMidpointAgain() (string, error) {
+	leafs := d.GetLeafs()
+	var maxValue CommitAncestors
+	total := len(d.GetVertices())
+
+	// for every leaf
+	for leaf := range leafs {
+		// Get the ordered ancestors of this shit
+		ancestors, err := d.GetOrderedAncestors(leaf)
+		if err != nil {
+			return "", err
+		}
+		// Get the middle of it
+		// anc := ancestors[len(ancestors)/2]
+
+		increment := len(ancestors) / 15
+		for i := increment; i < len(ancestors)-increment; i += increment {
+
+			// Get the length of ancestors of THAT
+			tempAnc, err := d.GetOrderedAncestors(ancestors[i])
+			if err != nil {
+				return "", nil
+			}
+			lenAncestors := len(tempAnc)
+
+			// Then get the heuristic of that
+			heuristic := math.Min(float64(lenAncestors), float64(total)-float64(lenAncestors))
+
+			// result.Value = math.Min(float64(result.Value), float64(numJobs)-float64(result.Value))
+			if heuristic > maxValue.Value {
+				maxValue = CommitAncestors{
+					Commit: ancestors[i],
+					Value:  heuristic,
+				}
+			}
+		}
+	}
+
+	return maxValue.Commit, nil
 }
 
 // GetMidPoint literally just returns the midpoint
-func (d *DAG) GetMidPoint() string {
+func (d *DAG) GetMidPoint() (string, error) {
+
+	if len(d.GetVertices()) > 15000 {
+		return d.GetEstimateMidpointAgain()
+	}
+
+	// // Get NumAncestors for each vertex
+	// numAncestors := d.PopulateAncestors()
+	// vertices := d.GetVertices()
+	// numVertices := len(vertices)
+
+	// var maxValue CommitAncestors
+
+	// // Then get the max heuristic result
+	// for commit, ancestors := range numAncestors {
+	// 	// log.Printf("(%v): %v", commit, ancestors)
+	// 	temp := math.Min(float64(ancestors), float64(numVertices)-float64(ancestors))
+	// 	if temp > maxValue.Value {
+	// 		maxValue = CommitAncestors{
+	// 			Commit: commit,
+	// 			Value:  temp,
+	// 		}
+	// 	}
+	// }
+
+	// actualAncestors, err := d.GetOrderedAncestors(maxValue.Commit)
+	// if err != nil {
+	// 	return "", err
+	// }
+
+	// log.Printf("Midpoint (%v) supposedly has %v ancestors, actually has %v", maxValue.Commit, numAncestors[maxValue.Commit], len(actualAncestors))
+
 	// numAncestors := make(map[string]int)
 	var maxValue CommitAncestors
-	vertices := d.GetVertices()
-	numJobs := len(vertices)
+	// vertices := d.GetVertices()
+
+	temp := make(map[string]bool)
+
+	// for key, thing := range d.inboundEdge {
+	// 	if len(thing) > 1 {
+	// 		temp[key] = true
+	// 	}
+	// }
+
+	for key, _ := range d.inboundEdge {
+		// if len(thing) > 1 {
+		temp[key] = true
+		// }
+	}
+
+	numJobs := len(temp)
 
 	jobs := make(chan string, numJobs)
-	results := make(chan *CommitAncestors, numJobs)
+	results := make(chan CommitAncestors, numJobs)
 
 	// We want to spawn some workers, who have a recieving commit channel, and send back results to a channel.
 
@@ -795,31 +962,47 @@ func (d *DAG) GetMidPoint() string {
 		go worker(w, d, jobs, results)
 	}
 
-	for j := range vertices {
+	// log.Println("Created all workers")
+
+	for j := range temp {
+		// if len(thing) > 1 {
 		jobs <- j
+		// }
 	}
+
 	close(jobs)
+	// log.Println("Submitted all jobs")
 
 	for a := 1; a <= numJobs; a++ {
 		result := <-results
-		result.NumAncestors = math.Min(float64(result.NumAncestors), float64(numJobs)-float64(result.NumAncestors))
-		if result.NumAncestors > maxValue.NumAncestors {
-			maxValue = *result
+		// log.Printf("(%v) has %v ancestors", result.Commit, result.Value)
+
+		// if result.Value == float64(numJobs/2) {
+		// 	// close(results)
+		// 	return result.Commit, nil
+		// }
+
+		result.Value = math.Min(float64(result.Value), float64(numJobs)-float64(result.Value))
+		if result.Value >= maxValue.Value {
+			maxValue = result
 		}
 	}
+	close(results)
 
-	return maxValue.Commit
+	log.Printf("Midpoint is (%v)", maxValue.Commit)
+
+	return maxValue.Commit, nil
 }
 
-func worker(id int, d *DAG, jobs <-chan string, results chan<- *CommitAncestors) {
+func worker(id int, d *DAG, jobs <-chan string, results chan<- CommitAncestors) {
 	for j := range jobs {
 		ancs, err := d.GetOrderedAncestors(j)
 		if err != nil {
 			log.Fatal(err)
 		}
-		results <- &CommitAncestors{
-			Commit:       j,
-			NumAncestors: float64(len(ancs)),
+		results <- CommitAncestors{
+			Commit: j,
+			Value:  float64(len(ancs)),
 		}
 	}
 }
