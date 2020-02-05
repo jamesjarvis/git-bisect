@@ -11,7 +11,7 @@
             "mode": "auto",
             "program": "/Users/jarjames/git/git-bisect/cmd/fromjson/main.go",
             "env": {},
-            "args": []
+            "args": ["tests/"]
         }
     ]
 }

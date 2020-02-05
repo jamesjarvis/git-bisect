@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	bisect "github.com/jamesjarvis/git-bisect/pkg/bisect"
 )
@@ -9,7 +10,15 @@ import (
 func main() {
 	log.Printf("Connecting to problem server")
 
-	problem, err := bisect.Connect()
+	// Get directory of examples
+	dirname := os.Args[1]
+
+	conn, err := bisect.ConnectJSON(dirname)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	problem, err := conn.GetProblemJSON()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -50,7 +59,14 @@ func main() {
 
 	// // fmt.Printf("Problem: %v now has %v commits after BAD (%v)\n", problem.Name, len(dag), problem.Bad)
 
-	score := bisect.NextMove(newDag, bisect.GetBug())
+	score, err := conn.NextMove(newDag)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	log.Printf("Score for %v: %v\n", problem.Name, score.Score)
+	log.Print("SCORES ON THE DOORS")
+
+	for name, scor := range score.Score {
+		log.Printf("%v had a score of %v", name, scor)
+	}
 }
