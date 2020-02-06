@@ -1,8 +1,6 @@
 package bisect
 
 import (
-	"log"
-
 	"github.com/jamesjarvis/git-bisect/pkg/dag"
 )
 
@@ -24,8 +22,7 @@ func DAGMaker(p *Problem) *dag.DAG {
 
 			err = d.AddEdge(currentParentVertex, currentVertex)
 			if err != nil {
-				log.Printf("Error adding edge of (%v) -> (%v)", currentParentVertex, currentVertex)
-				// log.Fatal(err)
+				// log.Printf("Error adding edge of (%v) -> (%v)", currentParentVertex, currentVertex)
 			}
 		}
 	}

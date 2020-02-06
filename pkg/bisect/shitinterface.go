@@ -13,7 +13,7 @@ func (c *ConnectionJSON) NextMove(d *dag.DAG) (Score, error) {
 
 		// IF the length is 0, submit the last "badcommit"
 		if d.GetOrder() == 0 {
-			log.Printf("Submitting MOST RECENT (%v)\n", d.MostRecentBad)
+			// log.Printf("Submitting MOST RECENT (%v)\n", d.MostRecentBad)
 			s, p, err := c.SubmitSolutionJSON(Solution{
 				Solution: d.MostRecentBad,
 			})
@@ -28,21 +28,21 @@ func (c *ConnectionJSON) NextMove(d *dag.DAG) (Score, error) {
 
 			d = DAGMaker(&p)
 
-			log.Printf("Problem: %v has %v vertexes (commits) and %v edges with new dag map\n", p.Name, d.GetOrder(), d.GetSize())
+			log.Printf("Problem: %v has %v vertexes (commits) and %v edges\n", p.Name, d.GetOrder(), d.GetSize())
 
 			err = d.GoodCommit(p.Good)
 			if err != nil {
 				return s, err
 			}
 
-			log.Printf("Problem: %v now has %v commits after GOOD (%v)\n", p.Name, d.GetOrder(), p.Good)
+			// log.Printf("Problem: %v now has %v commits after GOOD (%v)\n", p.Name, d.GetOrder(), p.Good)
 
 			err = d.BadCommit(p.Bad)
 			if err != nil {
 				return s, err
 			}
 
-			log.Printf("Problem: %v now has %v commits after BAD (%v)\n", p.Name, d.GetOrder(), p.Bad)
+			// log.Printf("Problem: %v now has %v commits after BAD (%v)\n", p.Name, d.GetOrder(), p.Bad)
 
 		}
 
@@ -67,13 +67,13 @@ func (c *ConnectionJSON) NextMove(d *dag.DAG) (Score, error) {
 			if err != nil {
 				return s, err
 			}
-			log.Printf("Now %v commits after GOOD (%v)\n", d.GetOrder(), question.Question)
+			// log.Printf("Now %v commits after GOOD (%v)\n", d.GetOrder(), question.Question)
 		case "Bad":
 			err := d.BadCommit(question.Question)
 			if err != nil {
 				return s, err
 			}
-			log.Printf("Now %v commits after BAD (%v)\n", d.GetOrder(), question.Question)
+			// log.Printf("Now %v commits after BAD (%v)\n", d.GetOrder(), question.Question)
 		}
 	}
 }
@@ -85,7 +85,7 @@ func (c *Connection) NextMoveWebsocket(d *dag.DAG) (Score, error) {
 
 		// IF the length is 0, submit the last "badcommit"
 		if d.GetOrder() == 0 {
-			log.Printf("Submitting MOST RECENT (%v)\n", d.MostRecentBad)
+			// log.Printf("Submitting MOST RECENT (%v)\n", d.MostRecentBad)
 			s, p, err := c.SubmitSolutionWebsocket(Solution{
 				Solution: d.MostRecentBad,
 			})
@@ -100,21 +100,21 @@ func (c *Connection) NextMoveWebsocket(d *dag.DAG) (Score, error) {
 
 			d = DAGMaker(&p)
 
-			log.Printf("Problem: %v has %v vertexes (commits) and %v edges with new dag map\n", p.Name, d.GetOrder(), d.GetSize())
+			log.Printf("Problem: %v has %v vertexes (commits) and %v edges\n", p.Name, d.GetOrder(), d.GetSize())
 
 			err = d.GoodCommit(p.Good)
 			if err != nil {
 				return s, err
 			}
 
-			log.Printf("Problem: %v now has %v commits after GOOD (%v)\n", p.Name, d.GetOrder(), p.Good)
+			// log.Printf("Problem: %v now has %v commits after GOOD (%v)\n", p.Name, d.GetOrder(), p.Good)
 
 			err = d.BadCommit(p.Bad)
 			if err != nil {
 				return s, err
 			}
 
-			log.Printf("Problem: %v now has %v commits after BAD (%v)\n", p.Name, d.GetOrder(), p.Bad)
+			// log.Printf("Problem: %v now has %v commits after BAD (%v)\n", p.Name, d.GetOrder(), p.Bad)
 
 		}
 
@@ -139,13 +139,13 @@ func (c *Connection) NextMoveWebsocket(d *dag.DAG) (Score, error) {
 			if err != nil {
 				return s, err
 			}
-			log.Printf("Now %v commits after GOOD (%v)\n", d.GetOrder(), question.Question)
+			// log.Printf("Now %v commits after GOOD (%v)\n", d.GetOrder(), question.Question)
 		case "Bad":
 			err := d.BadCommit(question.Question)
 			if err != nil {
 				return s, err
 			}
-			log.Printf("Now %v commits after BAD (%v)\n", d.GetOrder(), question.Question)
+			// log.Printf("Now %v commits after BAD (%v)\n", d.GetOrder(), question.Question)
 		}
 	}
 }

@@ -741,7 +741,7 @@ func (d *DAG) GetMidPoint() (string, error) {
 	}
 	close(results)
 
-	log.Printf("Midpoint is (%v)", maxValue.Commit)
+	// log.Printf("Midpoint is (%v)", maxValue.Commit)
 
 	return maxValue.Commit, nil
 }

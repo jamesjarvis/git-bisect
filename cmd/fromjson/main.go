@@ -27,21 +27,21 @@ func main() {
 
 	newDag := bisect.DAGMaker(&problem)
 
-	log.Printf("Problem: %v has %v vertexes (commits) and %v edges with new dag map\n", problem.Name, newDag.GetOrder(), newDag.GetSize())
+	log.Printf("Problem: %v has %v vertexes (commits) and %v edges\n", problem.Name, newDag.GetOrder(), newDag.GetSize())
 
 	err = newDag.GoodCommit(problem.Good)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Printf("Problem: %v now has %v commits after GOOD (%v)\n", problem.Name, newDag.GetOrder(), problem.Good)
+	// log.Printf("Problem: %v now has %v commits after GOOD (%v)\n", problem.Name, newDag.GetOrder(), problem.Good)
 
 	err = newDag.BadCommit(problem.Bad)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Printf("Problem: %v now has %v commits after BAD (%v)\n", problem.Name, newDag.GetOrder(), problem.Bad)
+	// log.Printf("Problem: %v now has %v commits after BAD (%v)\n", problem.Name, newDag.GetOrder(), problem.Bad)
 
 	score, err := conn.NextMove(newDag)
 	if err != nil {
