@@ -652,6 +652,8 @@ type CommitAncestors struct {
 
 // GetEstimateMidpointAgain gets a rough midpoint just based on the middle commit in the graph??
 func (d *DAG) GetEstimateMidpointAgain() (string, error) {
+	DIVISIONS := 15
+
 	leafs := d.GetLeafs()
 	var maxValue CommitAncestors
 	total := len(d.GetVertices())
@@ -664,26 +666,35 @@ func (d *DAG) GetEstimateMidpointAgain() (string, error) {
 			return "", err
 		}
 
-		increment := len(ancestors) / 15
-		for i := increment; i < len(ancestors)-increment; i += increment {
+		// Get the number of jobs, since sometimes this just fudges up?
+		numJobs := 0
+		INCREMENT := len(ancestors) / DIVISIONS
+		for i := INCREMENT; i < len(ancestors)-INCREMENT; i += INCREMENT {
+			numJobs++
+		}
 
-			// Get the length of ancestors of THAT
-			tempAnc, err := d.GetOrderedAncestors(ancestors[i])
-			if err != nil {
-				return "", nil
-			}
-			lenAncestors := len(tempAnc)
+		jobs := make(chan string, numJobs)
+		results := make(chan CommitAncestors, numJobs)
 
-			// Then get the heuristic of that
-			heuristic := math.Min(float64(lenAncestors), float64(total)-float64(lenAncestors))
+		for w := 1; w <= runtime.GOMAXPROCS(0); w++ {
+			go worker(w, d, jobs, results)
+		}
 
-			if heuristic > maxValue.Value {
-				maxValue = CommitAncestors{
-					Commit: ancestors[i],
-					Value:  heuristic,
-				}
+		INCREMENT = len(ancestors) / DIVISIONS
+		for i := INCREMENT; i < len(ancestors)-INCREMENT; i += INCREMENT {
+			jobs <- ancestors[i]
+		}
+
+		close(jobs)
+
+		for a := 1; a <= numJobs; a++ {
+			result := <-results
+			result.Value = math.Min(float64(result.Value), float64(total)-float64(result.Value))
+			if result.Value >= maxValue.Value {
+				maxValue = result
 			}
 		}
+		close(results)
 	}
 
 	return maxValue.Commit, nil
@@ -692,7 +703,7 @@ func (d *DAG) GetEstimateMidpointAgain() (string, error) {
 // GetMidPoint literally just returns the midpoint
 func (d *DAG) GetMidPoint() (string, error) {
 
-	if len(d.GetVertices()) > 15000 {
+	if len(d.GetVertices()) > 20000 {
 		return d.GetEstimateMidpointAgain()
 	}
 
