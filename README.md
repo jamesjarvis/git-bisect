@@ -98,4 +98,6 @@ go run cmd/fromjson/main.go tests/
 
 And this should run for a while and eventually output your results.
 
+If you want to see some results already ran, [click here](results.txt)
+
 FYI: this was optimised for multiprocessing, so the more CPU's you chuck at this thing, the better it gets.
