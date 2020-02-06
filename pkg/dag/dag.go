@@ -703,7 +703,9 @@ func (d *DAG) GetEstimateMidpointAgain() (string, error) {
 // GetMidPoint literally just returns the midpoint
 func (d *DAG) GetMidPoint() (string, error) {
 
-	if len(d.GetVertices()) > 20000 {
+	LIMIT := 20000
+
+	if len(d.GetVertices()) > LIMIT {
 		return d.GetEstimateMidpointAgain()
 	}
 
