@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -60,9 +59,9 @@ func (c *ConnectionJSON) SubmitSolutionJSON(attempt Solution) (Score, Problem, e
 
 	// Check the attempt
 	if contains(currentAttempt.solution.AllBad, attempt.Solution) {
-		log.Printf("(%v) is indeed BAD", attempt.Solution)
+		// log.Printf("(%v) is indeed BAD", attempt.Solution)
 	} else {
-		log.Printf("(%v) is actually GOOD", attempt.Solution)
+		// log.Printf("(%v) is actually GOOD", attempt.Solution)
 	}
 
 	// Update the score for that attempt and wipe the memory

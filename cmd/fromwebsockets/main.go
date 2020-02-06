@@ -42,14 +42,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Printf("Problem: %v now has %v commits after GOOD (%v)\n", problem.Name, newDag.GetOrder(), problem.Good)
+	// log.Printf("Problem: %v now has %v commits after GOOD (%v)\n", problem.Name, newDag.GetOrder(), problem.Good)
 
 	err = newDag.BadCommit(problem.Bad)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Printf("Problem: %v now has %v commits after BAD (%v)\n", problem.Name, newDag.GetOrder(), problem.Bad)
+	// log.Printf("Problem: %v now has %v commits after BAD (%v)\n", problem.Name, newDag.GetOrder(), problem.Bad)
 
 	score, err := conn.NextMoveWebsocket(newDag)
 	if err != nil {
