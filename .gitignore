@@ -15,7 +15,7 @@
 # vendor/
 
 # Lots of shite
-tests/
+tests/test_linux*.json
 
 __debug_bin
 .DS_Store
