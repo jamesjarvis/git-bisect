@@ -2,12 +2,22 @@ package bisect
 
 import (
 	"log"
+	"math"
 
 	"github.com/jamesjarvis/git-bisect/pkg/dag"
 )
 
+// CopyMapFloat copies a string, float map to avoid any potential issues?
+func CopyMapFloat(in map[string]float64) map[string]float64 {
+	out := make(map[string]float64)
+	for key, value := range in {
+		out[key] = value
+	}
+	return out
+}
+
 // NextMove actually contains the logic
-func (c *ConnectionJSON) NextMove(d *dag.DAG) (Score, error) {
+func (c *ConnectionJSON) NextMove(d *dag.DAG, pc dag.ParamConfig, idealScores map[string]float64) (Score, error) {
 	var s Score
 	for {
 
@@ -20,7 +30,9 @@ func (c *ConnectionJSON) NextMove(d *dag.DAG) (Score, error) {
 			if err != nil {
 				return Score{}, err
 			}
-			if p.Name == "" {
+			if p.Name == "" { // Actually complete
+				s.IdealScores = CopyMapFloat(idealScores)
+				// log.Printf("Size of the ideal scores: %v, %v", idealScores, s.IdealScores)
 				return s, err
 			}
 
@@ -42,11 +54,14 @@ func (c *ConnectionJSON) NextMove(d *dag.DAG) (Score, error) {
 				return s, err
 			}
 
+			idealScores[p.Name] = math.Log2(float64(d.GetOrder()))
+			// log.Printf("Stored new ideal score: %v : %v", p.Name, idealScores[p.Name])
+
 			// log.Printf("Problem: %v now has %v commits after BAD (%v)\n", p.Name, d.GetOrder(), p.Bad)
 
 		}
 
-		midpoint, err := d.GetMidPoint()
+		midpoint, err := d.GetMidPoint(pc)
 		if err != nil {
 			return s, err
 		}
@@ -79,7 +94,7 @@ func (c *ConnectionJSON) NextMove(d *dag.DAG) (Score, error) {
 }
 
 // NextMoveWebsocket actually contains the logic
-func (c *Connection) NextMoveWebsocket(d *dag.DAG) (Score, error) {
+func (c *Connection) NextMoveWebsocket(d *dag.DAG, pc dag.ParamConfig) (Score, error) {
 	var s Score
 	for {
 
@@ -118,7 +133,7 @@ func (c *Connection) NextMoveWebsocket(d *dag.DAG) (Score, error) {
 
 		}
 
-		midpoint, err := d.GetMidPoint()
+		midpoint, err := d.GetMidPoint(pc)
 		if err != nil {
 			return s, err
 		}

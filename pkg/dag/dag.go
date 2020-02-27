@@ -77,6 +77,16 @@ type DAG struct {
 	MostRecentBad     string
 }
 
+// ParamConfig is simply the configuration for the Midpoint selection
+// Higher numbers = longer runtimes
+// Your mission, should you choose to select it, is to modify these values to get as close as possible to the "ideal" score
+type ParamConfig struct {
+	// Limit is the limit, below which the very intensive "proper" midpoint selection will happen
+	Limit int
+	// Divisions is the number of samples to take in the "lightweight" midpoint selection
+	Divisions int
+}
+
 // NewDAG creates / initializes a new DAG.
 func NewDAG() *DAG {
 	return &DAG{
@@ -651,8 +661,8 @@ type CommitAncestors struct {
 }
 
 // GetEstimateMidpointAgain gets a rough midpoint just based on the middle commit in the graph??
-func (d *DAG) GetEstimateMidpointAgain() (string, error) {
-	DIVISIONS := 15
+// DIVISIONS is the parameter to play around with, for the number of samples to take
+func (d *DAG) GetEstimateMidpointAgain(c ParamConfig) (string, error) {
 
 	leafs := d.GetLeafs()
 	var maxValue CommitAncestors
@@ -668,7 +678,7 @@ func (d *DAG) GetEstimateMidpointAgain() (string, error) {
 
 		// Get the number of jobs, since sometimes this just fudges up?
 		numJobs := 0
-		INCREMENT := len(ancestors) / DIVISIONS
+		INCREMENT := len(ancestors) / c.Divisions
 		for i := INCREMENT; i < len(ancestors)-INCREMENT; i += INCREMENT {
 			numJobs++
 		}
@@ -680,7 +690,7 @@ func (d *DAG) GetEstimateMidpointAgain() (string, error) {
 			go worker(w, d, jobs, results)
 		}
 
-		INCREMENT = len(ancestors) / DIVISIONS
+		INCREMENT = len(ancestors) / c.Divisions
 		for i := INCREMENT; i < len(ancestors)-INCREMENT; i += INCREMENT {
 			jobs <- ancestors[i]
 		}
@@ -701,12 +711,10 @@ func (d *DAG) GetEstimateMidpointAgain() (string, error) {
 }
 
 // GetMidPoint literally just returns the midpoint
-func (d *DAG) GetMidPoint() (string, error) {
+func (d *DAG) GetMidPoint(c ParamConfig) (string, error) {
 
-	LIMIT := 20000
-
-	if len(d.GetVertices()) > LIMIT {
-		return d.GetEstimateMidpointAgain()
+	if len(d.GetVertices()) > c.Limit {
+		return d.GetEstimateMidpointAgain(c)
 	}
 
 	var maxValue CommitAncestors

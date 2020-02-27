@@ -6,6 +6,7 @@ import (
 	"net/url"
 
 	bisect "github.com/jamesjarvis/git-bisect/pkg/bisect"
+	"github.com/jamesjarvis/git-bisect/pkg/dag"
 )
 
 func main() {
@@ -13,6 +14,11 @@ func main() {
 	u := url.URL{Scheme: "ws", Host: *addr, Path: "/"}
 
 	log.Printf("Connecting to problem server (%v) 🤖\n", u.String())
+
+	config := dag.ParamConfig{
+		Limit:     20000,
+		Divisions: 400,
+	}
 
 	conn, err := bisect.ConnectWebsocket(u)
 	if err != nil {
@@ -51,7 +57,7 @@ func main() {
 
 	// log.Printf("Problem: %v now has %v commits after BAD (%v)\n", problem.Name, newDag.GetOrder(), problem.Bad)
 
-	score, err := conn.NextMoveWebsocket(newDag)
+	score, err := conn.NextMoveWebsocket(newDag, config)
 	if err != nil {
 		log.Fatal(err)
 	}

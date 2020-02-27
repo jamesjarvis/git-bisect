@@ -2,13 +2,23 @@ package main
 
 import (
 	"log"
+	"math"
 	"os"
 
 	bisect "github.com/jamesjarvis/git-bisect/pkg/bisect"
+	"github.com/jamesjarvis/git-bisect/pkg/dag"
 )
 
 func main() {
 	log.Printf("Connecting to problem server")
+
+	config := dag.ParamConfig{
+		Limit:     20000,
+		Divisions: 200,
+	}
+
+	// IdealScores is just a global variable to store the "ideal" (log2(n)) scores for each problem
+	var IdealScores map[string]float64
 
 	// Get directory of examples
 	dirname := os.Args[1]
@@ -41,20 +51,34 @@ func main() {
 		log.Fatal(err)
 	}
 
+	IdealScores = make(map[string]float64)
+	IdealScores[problem.Name] = math.Log2(float64(newDag.GetOrder()))
+	// log.Printf("ideal score for %v : %v", problem.Name, math.Log2(float64(newDag.GetOrder())))
+	// log.Printf("stored ideal score for %v: %v", problem.Name, IdealScores[problem.Name])
+
 	// log.Printf("Problem: %v now has %v commits after BAD (%v)\n", problem.Name, newDag.GetOrder(), problem.Bad)
 
-	score, err := conn.NextMove(newDag)
+	score, err := conn.NextMove(newDag, config, IdealScores)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	IdealScores = bisect.CopyMapFloat(score.IdealScores)
+
 	log.Print("SCORES ON THE DOORS")
+	log.Printf("CONFIG: %v LIMIT, %v DIVISIONS", config.Limit, config.Divisions)
 
 	totalScore := 0
+	var totalIdealScore float64
 	for name, scor := range score.Score {
 		totalScore += scor
-		log.Printf("%v had a score of %v", name, scor)
+		log.Printf("%v has score: %v", name, scor)
+	}
+
+	for _, idealScor := range score.IdealScores {
+		totalIdealScore += idealScor
 	}
 	log.Printf("Total score: %v", totalScore)
+	log.Printf("Total ideal score: %v", totalIdealScore)
 
 }

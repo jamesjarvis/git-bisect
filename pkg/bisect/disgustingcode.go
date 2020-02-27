@@ -105,5 +105,6 @@ type Solution struct {
 
 // Score is the score json interface (should change for the websockets)
 type Score struct {
-	Score map[string]int `json:"Score"`
+	Score       map[string]int `json:"Score"`
+	IdealScores map[string]float64 `json:",omitempty"`
 }
