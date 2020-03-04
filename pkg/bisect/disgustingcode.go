@@ -36,56 +36,34 @@ func (d *DAGEntry) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Problemcontainer is the problem container
-type Problemcontainer struct {
-	Problem Problem `json:"Problem"`
+// ProblemInstance is just a container for the problem
+type ProblemInstance struct {
+	Repo     Repo
+	Instance Instance
 }
 
-// Problem is the problem section of the json
-type Problem struct {
-	Name string     `json:"name"`
-	Good string     `json:"good"`
-	Bad  string     `json:"bad"`
-	Dag  []DAGEntry `json:"dag"`
+// RepoContainer is just a way to get around Radu's json formatting
+type RepoContainer struct {
+	Repo Repo `json:"Repo"`
 }
 
-// Solutions is the solution section of the json
-type Solutions struct {
-	Bug    string   `json:"bug"`
-	AllBad []string `json:"all_bad"`
+// Repo is the repo messager
+type Repo struct {
+	Name          string     `json:"name"`
+	InstanceCount int        `json:"instance_count"`
+	Dag           []DAGEntry `json:"dag"`
 }
 
-// Root is all of the json
-type Root struct {
-	Problem   Problem
-	Solutions Solutions
+// InstanceContainer just contains the instance lol
+type InstanceContainer struct {
+	Instance Instance `json:"Instance"`
 }
 
-func (d *Root) UnmarshalJSON(data []byte) error {
-	var v []interface{}
-	if err := json.Unmarshal(data, &v); err != nil {
-		return err
-	}
-
-	pmap := v[0]
-	smap := v[1]
-
-	pbytes, _ := json.Marshal(pmap)
-	sbytes, _ := json.Marshal(smap)
-
-	err := json.Unmarshal(pbytes, &d.Problem)
-
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(sbytes, &d.Solutions)
-
-	if err != nil {
-		return err
-	}
-
-	return err
+// Instance is the problem instance, with the good and bad commits
+// It is assumed that the repo this instance refers to is simply the last repo mentioned before this message.
+type Instance struct {
+	Good string `json:"good"`
+	Bad  string `json:"bad"`
 }
 
 // Question is the question json interface
@@ -105,6 +83,6 @@ type Solution struct {
 
 // Score is the score json interface (should change for the websockets)
 type Score struct {
-	Score       map[string]int `json:"Score"`
-	IdealScores map[string]float64 `json:",omitempty"`
+	Score       map[string]interface{} `json:"Score"`
+	IdealScores map[string]float64     `json:",omitempty"`
 }

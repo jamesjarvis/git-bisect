@@ -5,7 +5,7 @@ import (
 )
 
 // DAGMaker takes the problem struct and returns the Dag
-func DAGMaker(p *Problem) *dag.DAG {
+func DAGMaker(p *Repo) *dag.DAG {
 	// initialize a new graph
 	d := dag.NewDAG()
 
