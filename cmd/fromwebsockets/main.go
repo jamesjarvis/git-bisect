@@ -65,4 +65,9 @@ func main() {
 	}
 
 	log.Printf("%v", score)
+
+	err = bisect.SaveResults(&score)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

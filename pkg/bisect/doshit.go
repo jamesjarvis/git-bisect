@@ -1,6 +1,9 @@
 package bisect
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/jamesjarvis/git-bisect/pkg/dag"
 )
 
@@ -28,4 +31,23 @@ func DAGMaker(p *Repo) *dag.DAG {
 	}
 
 	return d
+}
+
+// SaveResults saves the scores to a file
+func SaveResults(s *Score) error {
+	f, err := os.Create("results.txt")
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+
+	for key, val := range s.Score {
+		_, err := f.WriteString(fmt.Sprintf("Problem: %v, %v\n", key, val))
+		if err != nil {
+			return err
+		}
+	}
+
+	return f.Sync()
 }
