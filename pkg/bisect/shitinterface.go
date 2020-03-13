@@ -21,8 +21,8 @@ func (c *Connection) NextMoveWebsocket(d *dag.DAG, pc dag.ParamConfig, problemIn
 	for {
 
 		// IF the length is 0, submit the last "badcommit"
-		if d.GetOrder() == 0 {
-			// log.Printf("Submitting MOST RECENT (%v)\n", d.MostRecentBad)
+		for d.GetOrder() == 0 {
+			log.Printf("👌 Submitting (%v)\n", d.MostRecentBad)
 			var err error
 			s, problemInstance, err = c.SubmitSolutionWebsocket(Solution{
 				Solution: d.MostRecentBad,
@@ -55,6 +55,7 @@ func (c *Connection) NextMoveWebsocket(d *dag.DAG, pc dag.ParamConfig, problemIn
 
 			log.Printf("Now %v commits after BAD 👎 (%v)\n", d.GetOrder(), problemInstance.Instance.Bad)
 
+			// In the event they basically give us the answer, it should submit the solution??
 		}
 
 		midpoint, err := d.GetMidPoint(pc)
@@ -65,6 +66,8 @@ func (c *Connection) NextMoveWebsocket(d *dag.DAG, pc dag.ParamConfig, problemIn
 		question := Question{
 			Question: midpoint,
 		}
+
+		log.Printf("❓Asking about %v\n", midpoint)
 
 		// ELSE get midpoint and ask question
 		answer, err := c.AskQuestionWebsocket(question)

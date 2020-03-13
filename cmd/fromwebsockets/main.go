@@ -11,7 +11,8 @@ import (
 )
 
 func main() {
-	var addr = flag.String("addr", "129.12.44.246:1234", "http service address")
+	var addr = flag.String("addr", "129.12.44.246:1234", "http service address") //Submission
+	// var addr = flag.String("addr", "129.12.44.229:1234", "http service address") //Test
 	u := url.URL{Scheme: "ws", Host: *addr, Path: "/"}
 	timeout := time.Minute * 30
 

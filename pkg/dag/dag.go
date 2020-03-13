@@ -726,7 +726,7 @@ func (d *DAG) GetEstimateMidpointAgain(c ParamConfig) (string, error) {
 // GetMidPoint literally just returns the midpoint
 func (d *DAG) GetMidPoint(c ParamConfig) (string, error) {
 
-	if len(d.GetVertices()) > c.Limit {
+	if d.GetOrder() > c.Limit {
 		return d.GetEstimateMidpointAgain(c)
 	}
 
@@ -734,11 +734,25 @@ func (d *DAG) GetMidPoint(c ParamConfig) (string, error) {
 
 	temp := make(map[string]bool)
 
-	for key, _ := range d.inboundEdge {
+	for key := range d.inboundEdge {
 		temp[key] = true
 	}
 
+	if len(temp) == 0 {
+		for key := range d.GetVertices() {
+			temp[key] = true
+		}
+	}
+
 	numJobs := len(temp)
+	log.Printf("Number of vertices to check: %v, but number of vertices? %v\n", numJobs, d.GetOrder())
+	if numJobs == 1 {
+		var thing string
+		for s := range temp {
+			thing = s
+		}
+		return thing, nil
+	}
 
 	jobs := make(chan string, numJobs)
 	results := make(chan CommitAncestors, numJobs)
