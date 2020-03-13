@@ -4,23 +4,25 @@ import (
 	"flag"
 	"log"
 	"net/url"
+	"time"
 
 	bisect "github.com/jamesjarvis/git-bisect/pkg/bisect"
 	"github.com/jamesjarvis/git-bisect/pkg/dag"
 )
 
 func main() {
-	var addr = flag.String("addr", "129.12.44.229:1234", "http service address")
+	var addr = flag.String("addr", "129.12.44.246:1234", "http service address")
 	u := url.URL{Scheme: "ws", Host: *addr, Path: "/"}
+	timeout := time.Minute * 30
 
 	log.Printf("Connecting to problem server (%v) 🤖\n", u.String())
 
 	config := dag.ParamConfig{
-		Limit:     20000,
+		Limit:     30000,
 		Divisions: 400,
 	}
 
-	conn, err := bisect.ConnectWebsocket(u)
+	conn, err := bisect.ConnectWebsocket(u, timeout)
 	if err != nil {
 		log.Print("Could not connect to websocket 🤖😢")
 		log.Fatal(err)

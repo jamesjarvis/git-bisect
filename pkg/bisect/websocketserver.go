@@ -19,13 +19,13 @@ type Authentication struct {
 
 // Connection is the websocket connection
 type Connection struct {
-	WS *websocket.Conn
+	WS      *websocket.Conn
+	Timeout time.Duration
 }
 
 // ConnectWebsocket connects to the websocket server, and returns the problem
-func ConnectWebsocket(u url.URL) (*Connection, error) {
+func ConnectWebsocket(u url.URL, t time.Duration) (*Connection, error) {
 	flag.Parse()
-	log.SetFlags(0)
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
@@ -35,7 +35,7 @@ func ConnectWebsocket(u url.URL) (*Connection, error) {
 		return nil, err
 	}
 
-	return &Connection{c}, nil
+	return &Connection{c, t}, nil
 }
 
 // GetProblemWebsocket simply returns the problem, given an authentication
@@ -98,13 +98,22 @@ func (c *Connection) AskQuestionWebsocket(q Question) (Answer, error) {
 		return ans, err
 	}
 
+	c.WS.SetWriteDeadline(time.Now().Add(c.Timeout))
+	c.WS.SetReadDeadline(time.Now().Add(c.Timeout))
+
+	// time.Sleep(time.Second / 4)
+
 	err = c.WS.WriteMessage(websocket.TextMessage, jsonq)
 	if err != nil {
+		log.Printf("Error writing question")
 		return ans, err
 	}
 
+	// time.Sleep(time.Second / 100)
+
 	_, message, err := c.WS.ReadMessage()
 	if err != nil {
+		log.Printf("Error retrieving question answer")
 		return ans, err
 	}
 
@@ -125,7 +134,8 @@ func (c *Connection) SubmitSolutionWebsocket(attempt Solution, currentProb Probl
 	var repo RepoContainer
 	var inst InstanceContainer
 
-	time.Sleep(5000)
+	c.WS.SetWriteDeadline(time.Now().Add(c.Timeout))
+	c.WS.SetReadDeadline(time.Now().Add(c.Timeout))
 
 	// Marshal the submission
 	jsonq, err := json.Marshal(attempt)
@@ -133,15 +143,21 @@ func (c *Connection) SubmitSolutionWebsocket(attempt Solution, currentProb Probl
 		return scor, prob, err
 	}
 
+	// time.Sleep(time.Second / 4)
+
 	// Submit
 	err = c.WS.WriteMessage(websocket.TextMessage, jsonq)
 	if err != nil {
+		log.Printf("Error sending solution")
 		return scor, prob, err
 	}
+
+	// time.Sleep(time.Second / 4)
 
 	// Retrieve the response
 	_, message, err := c.WS.ReadMessage()
 	if err != nil {
+		log.Printf("Error retrieving solution answer")
 		return scor, prob, err
 	}
 
@@ -159,9 +175,12 @@ func (c *Connection) SubmitSolutionWebsocket(attempt Solution, currentProb Probl
 				return scor, prob, err
 			}
 
+			// time.Sleep(time.Second / 4)
+
 			// Now get the instance
 			_, instmessage, err := c.WS.ReadMessage()
 			if err != nil {
+				log.Printf("Error retrieving new instance")
 				return scor, prob, err
 			}
 

@@ -46,14 +46,14 @@ func (c *Connection) NextMoveWebsocket(d *dag.DAG, pc dag.ParamConfig, problemIn
 				return s, err
 			}
 
-			// log.Printf("Problem: %v now has %v commits after GOOD (%v)\n", p.Name, d.GetOrder(), p.Good)
+			log.Printf("Now %v commits after GOOD 👍 (%v)\n", d.GetOrder(), problemInstance.Instance.Good)
 
 			err = d.BadCommit(problemInstance.Instance.Bad)
 			if err != nil {
 				return s, err
 			}
 
-			// log.Printf("Problem: %v now has %v commits after BAD (%v)\n", p.Name, d.GetOrder(), p.Bad)
+			log.Printf("Now %v commits after BAD 👎 (%v)\n", d.GetOrder(), problemInstance.Instance.Bad)
 
 		}
 
@@ -78,13 +78,13 @@ func (c *Connection) NextMoveWebsocket(d *dag.DAG, pc dag.ParamConfig, problemIn
 			if err != nil {
 				return s, err
 			}
-			// log.Printf("Now %v commits after GOOD (%v)\n", d.GetOrder(), question.Question)
+			log.Printf("Now %v commits after GOOD 👍 (%v)\n", d.GetOrder(), question.Question)
 		case "Bad":
 			err := d.BadCommit(question.Question)
 			if err != nil {
 				return s, err
 			}
-			// log.Printf("Now %v commits after BAD (%v)\n", d.GetOrder(), question.Question)
+			log.Printf("Now %v commits after BAD 👎 (%v)\n", d.GetOrder(), question.Question)
 		}
 	}
 }

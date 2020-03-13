@@ -668,7 +668,9 @@ func (d *DAG) GetEstimateMidpointAgain(c ParamConfig) (string, error) {
 	var maxValue CommitAncestors
 	total := len(d.GetVertices())
 
-	// for every leaf
+	tovisit := make(map[string]bool)
+
+	// Go through all of the leafs (to cover all branches of the dag)
 	for leaf := range leafs {
 		// Get the ordered ancestors of this shit
 		ancestors, err := d.GetOrderedAncestors(leaf)
@@ -676,36 +678,47 @@ func (d *DAG) GetEstimateMidpointAgain(c ParamConfig) (string, error) {
 			return "", err
 		}
 
-		// Get the number of jobs, since sometimes this just fudges up?
-		numJobs := 0
+		// Get the middle half of the list
+		start := (len(ancestors) / 5) * 2
+		end := (len(ancestors) / 5) * 3
+		ancestors = ancestors[start:end]
+
+		// Add these to a map
 		INCREMENT := len(ancestors) / c.Divisions
 		for i := INCREMENT; i < len(ancestors)-INCREMENT; i += INCREMENT {
-			numJobs++
+			tovisit[ancestors[i]] = true
 		}
-
-		jobs := make(chan string, numJobs)
-		results := make(chan CommitAncestors, numJobs)
-
-		for w := 1; w <= runtime.GOMAXPROCS(0); w++ {
-			go worker(w, d, jobs, results)
-		}
-
-		INCREMENT = len(ancestors) / c.Divisions
-		for i := INCREMENT; i < len(ancestors)-INCREMENT; i += INCREMENT {
-			jobs <- ancestors[i]
-		}
-
-		close(jobs)
-
-		for a := 1; a <= numJobs; a++ {
-			result := <-results
-			result.Value = math.Min(float64(result.Value), float64(total)-float64(result.Value))
-			if result.Value >= maxValue.Value {
-				maxValue = result
-			}
-		}
-		close(results)
 	}
+
+	// Get the number of jobs
+	numJobs := len(tovisit)
+
+	// Spawn workers
+	jobs := make(chan string, numJobs)
+	results := make(chan CommitAncestors, numJobs)
+	for w := 1; w <= runtime.GOMAXPROCS(0); w++ {
+		go worker(w, d, jobs, results)
+	}
+
+	count := 0
+	// Submit jobs
+	for k := range tovisit {
+		jobs <- k
+		count++
+	}
+	close(jobs)
+
+	log.Printf("Number of jobs: %v, Number of jobs submitted %v", numJobs, count)
+
+	// Retrieve results
+	for a := 1; a <= numJobs; a++ {
+		result := <-results
+		result.Value = math.Min(float64(result.Value), float64(total)-float64(result.Value))
+		if result.Value >= maxValue.Value {
+			maxValue = result
+		}
+	}
+	close(results)
 
 	return maxValue.Commit, nil
 }
