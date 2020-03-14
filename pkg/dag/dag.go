@@ -700,15 +700,13 @@ func (d *DAG) GetEstimateMidpointAgain(c ParamConfig) (string, error) {
 		go worker(w, d, jobs, results)
 	}
 
-	count := 0
 	// Submit jobs
 	for k := range tovisit {
 		jobs <- k
-		count++
 	}
 	close(jobs)
 
-	log.Printf("Number of jobs: %v, Number of jobs submitted %v", numJobs, count)
+	log.Printf("Number of jobs: %v", numJobs)
 
 	// Retrieve results
 	for a := 1; a <= numJobs; a++ {
@@ -745,7 +743,7 @@ func (d *DAG) GetMidPoint(c ParamConfig) (string, error) {
 	}
 
 	numJobs := len(temp)
-	log.Printf("Number of vertices to check: %v, but number of vertices? %v\n", numJobs, d.GetOrder())
+	// log.Printf("Number of vertices to check: %v, but number of vertices? %v\n", numJobs, d.GetOrder())
 	if numJobs == 1 {
 		var thing string
 		for s := range temp {

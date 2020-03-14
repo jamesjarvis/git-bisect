@@ -18,6 +18,7 @@ func CopyMapFloat(in map[string]float64) map[string]float64 {
 // NextMoveWebsocket actually contains the logic
 func (c *Connection) NextMoveWebsocket(d *dag.DAG, pc dag.ParamConfig, problemInstance ProblemInstance) (Score, error) {
 	var s Score
+	problemnumber := 1
 	for {
 
 		// IF the length is 0, submit the last "badcommit"
@@ -37,7 +38,9 @@ func (c *Connection) NextMoveWebsocket(d *dag.DAG, pc dag.ParamConfig, problemIn
 			// Else, restart with the new problem
 
 			d = DAGMaker(&problemInstance.Repo)
+			problemnumber++
 
+			log.Printf("PROGRESS: %v / ?", problemnumber)
 			log.Printf("Problem: %v has %v vertexes (commits) and %v edges\n", problemInstance.Repo.Name, d.GetOrder(), d.GetSize())
 			log.Printf("Instance's GOOD: %v, BAD: %v", problemInstance.Instance.Good, problemInstance.Instance.Bad)
 
