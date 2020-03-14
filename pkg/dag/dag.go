@@ -85,6 +85,8 @@ type ParamConfig struct {
 	Limit int
 	// Divisions is the number of samples to take in the "lightweight" midpoint selection
 	Divisions int
+	// Merges is the number of merges to take in the "lighweight" midpoint selection
+	Merges int
 }
 
 // NewDAG creates / initializes a new DAG.
@@ -352,6 +354,19 @@ func (d *DAG) GetVertices() map[string]bool {
 	d.muDAG.RLock()
 	defer d.muDAG.RUnlock()
 	return copyMap(d.vertices)
+}
+
+// GetMerges returns all vertices with multiple parents
+func (d *DAG) GetMerges() map[string]bool {
+	d.muDAG.RLock()
+	defer d.muDAG.RUnlock()
+	merges := make(map[string]bool)
+	for k, v := range d.inboundEdge {
+		if len(v) > 1 {
+			merges[k] = true
+		}
+	}
+	return merges
 }
 
 // GetParents returns all parents of vertex v. GetParents returns an error,
@@ -661,14 +676,25 @@ type CommitAncestors struct {
 }
 
 // GetEstimateMidpointAgain gets a rough midpoint just based on the middle commit in the graph??
-// DIVISIONS is the parameter to play around with, for the number of samples to take
+// DIVISIONS is the parameter to play around with, for the number of samples to take from the middle fifth section
+// It also add all the merge commits to this, just for fun
 func (d *DAG) GetEstimateMidpointAgain(c ParamConfig) (string, error) {
 
 	leafs := d.GetLeafs()
+	merges := d.GetMerges()
 	var maxValue CommitAncestors
 	total := len(d.GetVertices())
 
 	tovisit := make(map[string]bool)
+
+	numMerges := c.Merges
+	// Add a number of merges
+	for m := range merges {
+		if numMerges > 0 {
+			tovisit[m] = true
+		}
+		numMerges--
+	}
 
 	// log.Printf("Number of leaves: %v", len(leafs))
 
@@ -737,7 +763,7 @@ func (d *DAG) GetEstimateMidpointAgain(c ParamConfig) (string, error) {
 func (d *DAG) GetMidPoint(c ParamConfig) (string, error) {
 
 	if d.GetOrder() > c.Limit {
-		log.Print("estimating...")
+		// log.Print("estimating...")
 		return d.GetEstimateMidpointAgain(c)
 	}
 

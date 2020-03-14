@@ -19,8 +19,9 @@ func main() {
 	log.Printf("Connecting to problem server (%v) 🤖\n", u.String())
 
 	config := dag.ParamConfig{
-		Limit:     20000,
-		Divisions: 400,
+		Limit:     5000,
+		Divisions: 50,
+		Merges:    100,
 	}
 
 	conn, err := bisect.ConnectWebsocket(u, timeout)

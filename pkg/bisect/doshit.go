@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/jamesjarvis/git-bisect/pkg/dag"
@@ -52,11 +53,11 @@ func SaveResults(s *Score, start time.Time) error {
 	gaveup := 0
 
 	for key, val := range s.Score {
-		corr, ok := val.(map[string]int)
+		corr, ok := val.(map[string]interface{})
 		if !ok {
 			wrong, ok := val.(string)
 			if !ok {
-				log.Printf("Failed score analysis with %v, %v", key, val)
+				log.Printf("Failed failure analysis with %v, %v", key, val)
 			}
 			if wrong == "GaveUp" {
 				// If you give up, it counts as a score of 30 I believe?
@@ -73,22 +74,42 @@ func SaveResults(s *Score, start time.Time) error {
 				}
 			}
 		} else {
-			totalscore += corr["Correct"]
-			correctsolutions++
-			_, err := f.WriteString(fmt.Sprintf("✅ %v : %v\n", key, corr["Correct"]))
-			if err != nil {
-				return err
+			finalint, ok := corr["Correct"].(float64)
+			if !ok {
+				finalstring, ok := corr["Correct"].(string)
+				if !ok {
+					log.Printf("Failed score analysis with %v, %v", key, val)
+				} else {
+					intversion, err := strconv.ParseInt(finalstring, 10, 32)
+					if err != nil {
+						return err
+					}
+					totalscore += int(intversion)
+					correctsolutions++
+					_, err = f.WriteString(fmt.Sprintf("✅ %v : %v\n", key, intversion))
+					if err != nil {
+						return err
+					}
+				}
+			} else {
+				totalscore += int(finalint)
+				correctsolutions++
+				_, err = f.WriteString(fmt.Sprintf("✅ %v : %v\n", key, finalint))
+				if err != nil {
+					return err
+				}
 			}
+
 		}
 	}
 
-	f.WriteString(fmt.Sprintf("Total problems: %v", len(s.Score)))
-	f.WriteString(fmt.Sprintf("Correct solutions: %v, Incorrect solutions: %v, GaveUp: %v", correctsolutions, wrongsolutions, gaveup))
-	f.WriteString(fmt.Sprintf("Total questions asked: %v", totalscore))
-	f.WriteString(fmt.Sprintf("Average questions per correct problem: %v", totalscore/correctsolutions))
-	f.WriteString(fmt.Sprintf("Started at: %v", start.String()))
-	f.WriteString(fmt.Sprintf("Completed at: %v", end.String()))
-	f.WriteString(fmt.Sprintf("Time taken: %v", time.Since(start).String()))
+	f.WriteString(fmt.Sprintf("Total problems: %v\n", len(s.Score)))
+	f.WriteString(fmt.Sprintf("Correct solutions: %v, Incorrect solutions: %v, GaveUp: %v\n", correctsolutions, wrongsolutions, gaveup))
+	f.WriteString(fmt.Sprintf("Total questions asked: %v\n", totalscore))
+	f.WriteString(fmt.Sprintf("Average questions per correct problem: %v\n", totalscore/correctsolutions))
+	f.WriteString(fmt.Sprintf("Started at: %v\n", start.String()))
+	f.WriteString(fmt.Sprintf("Completed at: %v\n", end.String()))
+	f.WriteString(fmt.Sprintf("Time taken: %v\n", time.Since(start).String()))
 
 	return f.Sync()
 }
