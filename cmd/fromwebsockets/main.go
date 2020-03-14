@@ -19,7 +19,7 @@ func main() {
 	log.Printf("Connecting to problem server (%v) 🤖\n", u.String())
 
 	config := dag.ParamConfig{
-		Limit:     5000,
+		Limit:     1000,
 		Divisions: 300,
 	}
 

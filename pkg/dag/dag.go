@@ -670,28 +670,38 @@ func (d *DAG) GetEstimateMidpointAgain(c ParamConfig) (string, error) {
 
 	tovisit := make(map[string]bool)
 
+	// log.Printf("Number of leaves: %v", len(leafs))
+
 	// Go through all of the leafs (to cover all branches of the dag)
 	for leaf := range leafs {
 		// Get the ordered ancestors of this shit
 		ancestors, err := d.GetOrderedAncestors(leaf)
 		if err != nil {
+			log.Print("Failed retrieving ancestors")
 			return "", err
 		}
+		// log.Printf("Ancestors original length: %v", len(ancestors))
 
 		// Get the middle half of the list
 		start := (len(ancestors) / 5) * 2
 		end := (len(ancestors) / 5) * 3
 		ancestors = ancestors[start:end]
 
+		// log.Printf("Start %v, end %v, length %v", start, end, len(ancestors))
+
 		// Add these to a map
-		INCREMENT := len(ancestors) / c.Divisions
-		for i := INCREMENT; i < len(ancestors)-INCREMENT; i += INCREMENT {
+		INCREMENT := int(math.Max(1, float64(len(ancestors)/c.Divisions)))
+		// log.Printf("INCREMENT: %v", INCREMENT)
+		for i := 0; i < len(ancestors)-INCREMENT; i += INCREMENT {
+			// log.Printf("attempt to access %v", i)
 			tovisit[ancestors[i]] = true
 		}
 	}
 
 	// Get the number of jobs
 	numJobs := len(tovisit)
+
+	// log.Printf("Number of jobs: %v", numJobs)
 
 	// Spawn workers
 	jobs := make(chan string, numJobs)
@@ -700,13 +710,15 @@ func (d *DAG) GetEstimateMidpointAgain(c ParamConfig) (string, error) {
 		go worker(w, d, jobs, results)
 	}
 
+	// log.Print("Workers spawned")
+
 	// Submit jobs
 	for k := range tovisit {
 		jobs <- k
 	}
 	close(jobs)
 
-	log.Printf("Number of jobs: %v", numJobs)
+	// log.Print("Jobs submitted")
 
 	// Retrieve results
 	for a := 1; a <= numJobs; a++ {
@@ -725,6 +737,7 @@ func (d *DAG) GetEstimateMidpointAgain(c ParamConfig) (string, error) {
 func (d *DAG) GetMidPoint(c ParamConfig) (string, error) {
 
 	if d.GetOrder() > c.Limit {
+		log.Print("estimating...")
 		return d.GetEstimateMidpointAgain(c)
 	}
 
@@ -732,15 +745,7 @@ func (d *DAG) GetMidPoint(c ParamConfig) (string, error) {
 
 	temp := make(map[string]bool)
 
-	for key := range d.inboundEdge {
-		temp[key] = true
-	}
-
-	if len(temp) == 0 {
-		for key := range d.GetVertices() {
-			temp[key] = true
-		}
-	}
+	temp = d.GetVertices()
 
 	numJobs := len(temp)
 	// log.Printf("Number of vertices to check: %v, but number of vertices? %v\n", numJobs, d.GetOrder())
