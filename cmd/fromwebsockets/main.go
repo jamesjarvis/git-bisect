@@ -19,8 +19,8 @@ func main() {
 	log.Printf("Connecting to problem server (%v) 🤖\n", u.String())
 
 	config := dag.ParamConfig{
-		Limit:     1000,
-		Divisions: 300,
+		Limit:     20000,
+		Divisions: 400,
 	}
 
 	conn, err := bisect.ConnectWebsocket(u, timeout)
@@ -35,6 +35,8 @@ func main() {
 	auth := bisect.Authentication{
 		User: []string{"jj333", "30e8e949"},
 	}
+
+	STARTTIME := time.Now()
 
 	problem, err := conn.GetProblemWebsocket(auth)
 	if err != nil {
@@ -69,7 +71,7 @@ func main() {
 
 	log.Printf("%v", score)
 
-	err = bisect.SaveResults(&score)
+	err = bisect.SaveResults(&score, STARTTIME)
 	if err != nil {
 		log.Fatal(err)
 	}
