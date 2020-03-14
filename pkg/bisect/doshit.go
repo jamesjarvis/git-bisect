@@ -2,7 +2,9 @@ package bisect
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"time"
 
 	"github.com/jamesjarvis/git-bisect/pkg/dag"
 )
@@ -34,7 +36,9 @@ func DAGMaker(p *Repo) *dag.DAG {
 }
 
 // SaveResults saves the scores to a file
-func SaveResults(s *Score) error {
+func SaveResults(s *Score, start time.Time) error {
+	end := time.Now()
+
 	f, err := os.Create("results.txt")
 	if err != nil {
 		return err
@@ -42,12 +46,49 @@ func SaveResults(s *Score) error {
 
 	defer f.Close()
 
+	totalscore := 0
+	correctsolutions := 0
+	wrongsolutions := 0
+	gaveup := 0
+
 	for key, val := range s.Score {
-		_, err := f.WriteString(fmt.Sprintf("Problem: %v, %v\n", key, val))
-		if err != nil {
-			return err
+		corr, ok := val.(map[string]int)
+		if !ok {
+			wrong, ok := val.(string)
+			if !ok {
+				log.Printf("Failed score analysis with %v, %v", key, val)
+			}
+			if wrong == "GaveUp" {
+				// If you give up, it counts as a score of 30 I believe?
+				gaveup++
+				_, err := f.WriteString(fmt.Sprintf("😤 %v", key))
+				if err != nil {
+					return err
+				}
+			} else if wrong == "Wrong" {
+				wrongsolutions++
+				_, err := f.WriteString(fmt.Sprintf("❌ %v", key))
+				if err != nil {
+					return err
+				}
+			}
+		} else {
+			totalscore += corr["Correct"]
+			correctsolutions++
+			_, err := f.WriteString(fmt.Sprintf("✅ %v : %v\n", key, corr["Correct"]))
+			if err != nil {
+				return err
+			}
 		}
 	}
+
+	f.WriteString(fmt.Sprintf("Total problems: %v", len(s.Score)))
+	f.WriteString(fmt.Sprintf("Correct solutions: %v, Incorrect solutions: %v, GaveUp: %v", correctsolutions, wrongsolutions, gaveup))
+	f.WriteString(fmt.Sprintf("Total questions asked: %v", totalscore))
+	f.WriteString(fmt.Sprintf("Average questions per correct problem: %v", totalscore/correctsolutions))
+	f.WriteString(fmt.Sprintf("Started at: %v", start.String()))
+	f.WriteString(fmt.Sprintf("Completed at: %v", end.String()))
+	f.WriteString(fmt.Sprintf("Time taken: %v", time.Since(start).String()))
 
 	return f.Sync()
 }
