@@ -4,16 +4,6 @@ import (
 	"encoding/json"
 )
 
-// CommitVertex is the data structure that will be used as vertex in the graph
-type CommitVertex struct {
-	Commit string
-}
-
-// String implements the Vertex's interface method Id()
-func (v CommitVertex) String() string {
-	return v.Commit
-}
-
 // DAGEntry is the actual DAG part
 type DAGEntry struct {
 	commit  string
@@ -83,6 +73,5 @@ type Solution struct {
 
 // Score is the score json interface (should change for the websockets)
 type Score struct {
-	Score       map[string]interface{} `json:"Score"`
-	IdealScores map[string]float64     `json:",omitempty"`
+	Score map[string]interface{} `json:"Score"`
 }

@@ -101,15 +101,11 @@ func (c *Connection) AskQuestionWebsocket(q Question) (Answer, error) {
 	c.WS.SetWriteDeadline(time.Now().Add(c.Timeout))
 	c.WS.SetReadDeadline(time.Now().Add(c.Timeout))
 
-	// time.Sleep(time.Second / 4)
-
 	err = c.WS.WriteMessage(websocket.TextMessage, jsonq)
 	if err != nil {
 		log.Printf("Error writing question")
 		return ans, err
 	}
-
-	// time.Sleep(time.Second / 100)
 
 	_, message, err := c.WS.ReadMessage()
 	if err != nil {
@@ -143,16 +139,12 @@ func (c *Connection) SubmitSolutionWebsocket(attempt Solution, currentProb Probl
 		return scor, prob, err
 	}
 
-	// time.Sleep(time.Second / 4)
-
 	// Submit
 	err = c.WS.WriteMessage(websocket.TextMessage, jsonq)
 	if err != nil {
 		log.Printf("Error sending solution")
 		return scor, prob, err
 	}
-
-	// time.Sleep(time.Second / 4)
 
 	// Retrieve the response
 	_, message, err := c.WS.ReadMessage()
@@ -174,8 +166,6 @@ func (c *Connection) SubmitSolutionWebsocket(attempt Solution, currentProb Probl
 			if err != nil {
 				return scor, prob, err
 			}
-
-			// time.Sleep(time.Second / 4)
 
 			// Now get the instance
 			_, instmessage, err := c.WS.ReadMessage()

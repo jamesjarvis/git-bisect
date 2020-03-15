@@ -6,15 +6,6 @@ import (
 	"github.com/jamesjarvis/git-bisect/pkg/dag"
 )
 
-// CopyMapFloat copies a string, float map to avoid any potential issues?
-func CopyMapFloat(in map[string]float64) map[string]float64 {
-	out := make(map[string]float64)
-	for key, value := range in {
-		out[key] = value
-	}
-	return out
-}
-
 // NextMoveWebsocket actually contains the logic
 func (c *Connection) NextMoveWebsocket(d *dag.DAG, pc dag.ParamConfig, problemInstance ProblemInstance) (Score, error) {
 	var s Score

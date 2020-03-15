@@ -104,16 +104,14 @@ Observe that, from the problem instance, we already know that c is bad, so the s
 
 ## RUN LOCALLY
 
-The actual submission was made using websockets, but since that server is probably down by the time you read this, there is a local version to test.
+The actual submission was made using websockets, but since that server is probably down by the time you read this, you can see the output in [results.txt](results.txt)
 
 Simply run:
 
 ```bash
-go run cmd/fromjson/main.go tests/
+go run cmd/fromwebsockets/main.go
 ```
 
 And this should run for a while and eventually output your results.
 
-If you want to see some results already ran, [click here](results.txt)
-
-FYI: this was optimised for multiprocessing, so the more CPU's you chuck at this thing, the better it gets.
+FYI: this was optimised for multiprocessing, so the more CPU's you chuck at this thing, the better it gets. However still remains to be seen if the multiprocessing overhead actually slows it down?

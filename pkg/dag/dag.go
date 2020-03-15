@@ -68,13 +68,11 @@ THEN AFTER BAD:
 // The elements are literally just strings, because there is no reason for them not to be
 // The parent relations are stored in "inboundEdge", with a map of the children to map of parents
 type DAG struct {
-	muDAG             sync.RWMutex
-	vertices          map[string]bool
-	inboundEdge       map[string]map[string]bool
-	outboundEdge      map[string]map[string]bool
-	numAncestorsCache map[string]int
-	muCache           sync.RWMutex
-	MostRecentBad     string
+	muDAG         sync.RWMutex
+	vertices      map[string]bool
+	inboundEdge   map[string]map[string]bool
+	outboundEdge  map[string]map[string]bool
+	MostRecentBad string
 }
 
 // ParamConfig is simply the configuration for the Midpoint selection
@@ -92,50 +90,14 @@ type ParamConfig struct {
 // NewDAG creates / initializes a new DAG.
 func NewDAG() *DAG {
 	return &DAG{
-		vertices:          make(map[string]bool),
-		inboundEdge:       make(map[string]map[string]bool),
-		outboundEdge:      make(map[string]map[string]bool),
-		numAncestorsCache: make(map[string]int),
+		vertices:     make(map[string]bool),
+		inboundEdge:  make(map[string]map[string]bool),
+		outboundEdge: make(map[string]map[string]bool),
 	}
-}
-
-// AddVertex adds the vertex v to the DAG. AddVertex returns an error, if v is
-// nil, v is already part of the graph, or the id of v is already part of the
-// graph.
-func (d *DAG) AddVertex(v string) error {
-
-	d.muDAG.Lock()
-	defer d.muDAG.Unlock()
-
-	// sanity checking
-	if v == "" {
-		return IdEmptyError{}
-	}
-	if _, exists := d.vertices[v]; exists {
-		return IdDuplicateError{v}
-	}
-	d.addVertex(v)
-	return nil
 }
 
 func (d *DAG) addVertex(v string) {
 	d.vertices[v] = true
-}
-
-// VertexExists returns true if it exists, false otherwise
-func (d *DAG) VertexExists(id string) (bool, error) {
-	d.muDAG.RLock()
-	defer d.muDAG.RUnlock()
-
-	if id == "" {
-		return false, IdEmptyError{}
-	}
-
-	_, IDExists := d.vertices[id]
-	if !IDExists {
-		return false, IdUnknownError{id}
-	}
-	return true, nil
 }
 
 // DeleteVertex deletes the vertex v. DeleteVertex also deletes all attached
@@ -149,11 +111,6 @@ func (d *DAG) DeleteVertex(v string) error {
 	if err := d.saneVertex(v); err != nil {
 		return err
 	}
-
-	// // delete v from inbound edges
-	// for key := range d.inboundEdge {
-	// 	delete(d.inboundEdge[key], v)
-	// }
 
 	// delete v in outbound edges of parents
 	if _, exists := d.inboundEdge[v]; exists {
@@ -234,26 +191,6 @@ func (d *DAG) AddEdge(src string, dst string) error {
 	return nil
 }
 
-// IsEdge returns true, if there exists an edge between src and dst. IsEdge
-// returns false if there is no such edge. IsEdge returns an error, if src or
-// dst are nil, unknown or the same.
-func (d *DAG) IsEdge(src string, dst string) (bool, error) {
-	d.muDAG.RLock()
-	defer d.muDAG.RUnlock()
-
-	if err := d.saneVertex(src); err != nil {
-		return false, err
-	}
-	if err := d.saneVertex(dst); err != nil {
-		return false, err
-	}
-	if src == dst {
-		return false, SrcDstEqualError{src, dst}
-	}
-
-	return d.isEdge(src, dst), nil
-}
-
 func (d *DAG) isEdge(src string, dst string) bool {
 
 	_, outboundExists := d.outboundEdge[src]
@@ -313,24 +250,6 @@ func (d *DAG) getSize() int {
 	return count
 }
 
-// GetRoots returns all vertices without parents.
-func (d *DAG) GetRoots() map[string]bool {
-	d.muDAG.RLock()
-	defer d.muDAG.RUnlock()
-	return d.getRoots()
-}
-
-func (d *DAG) getRoots() map[string]bool {
-	roots := make(map[string]bool)
-	for v := range d.vertices {
-		srcIds, ok := d.inboundEdge[v]
-		if !ok || len(srcIds) == 0 {
-			roots[v] = true
-		}
-	}
-	return roots
-}
-
 // GetLeafs returns all vertices without children.
 func (d *DAG) GetLeafs() map[string]bool {
 	d.muDAG.RLock()
@@ -356,28 +275,21 @@ func (d *DAG) GetVertices() map[string]bool {
 	return copyMap(d.vertices)
 }
 
-// GetMerges returns all vertices with multiple parents
-func (d *DAG) GetMerges() map[string]bool {
+// GetNMerges returns the first n vertices with multiple parents
+func (d *DAG) GetNMerges(n int) map[string]bool {
 	d.muDAG.RLock()
 	defer d.muDAG.RUnlock()
 	merges := make(map[string]bool)
 	for k, v := range d.inboundEdge {
 		if len(v) > 1 {
 			merges[k] = true
+			n--
+			if n == 0 {
+				return merges
+			}
 		}
 	}
 	return merges
-}
-
-// GetParents returns all parents of vertex v. GetParents returns an error,
-// if v is nil or unknown.
-func (d *DAG) GetParents(v string) (map[string]bool, error) {
-	d.muDAG.RLock()
-	defer d.muDAG.RUnlock()
-	if err := d.saneVertex(v); err != nil {
-		return nil, err
-	}
-	return copyMap(d.inboundEdge[v]), nil
 }
 
 // GetOrderedAncestors returns all ancestors of the vertex v in a breath-first
@@ -398,6 +310,21 @@ func (d *DAG) GetOrderedAncestors(v string) ([]string, error) {
 		ancestors = append(ancestors, v)
 	}
 	return ancestors, nil
+}
+
+// GetAncestorsLength returns the length of ancestors
+func (d *DAG) GetAncestorsLength(v string) (int, error) {
+	d.muDAG.RLock()
+	defer d.muDAG.RUnlock()
+	vertices, _, err := d.AncestorsWalker(v)
+	if err != nil {
+		return 0, err
+	}
+	ancestorslength := 0
+	for range vertices {
+		ancestorslength++
+	}
+	return ancestorslength, nil
 }
 
 // AncestorsWalker returns a channel and subsequently returns / walks all
@@ -492,26 +419,9 @@ func copyMap(in map[string]bool) map[string]bool {
 	return out
 }
 
-func copyBigMap(in map[string]map[string]bool) map[string]map[string]bool {
-	out := make(map[string]map[string]bool)
-	for key, value := range in {
-		out[key] = value
-	}
-	return out
-}
-
 /***************************
 ********** Errors **********
 ****************************/
-
-// VertexNilError is the error type to describe the situation, that a nil is
-// given instead of a vertex.
-type VertexNilError struct{}
-
-// Implements the error interface.
-func (e VertexNilError) Error() string {
-	return fmt.Sprint("don't know what to do with 'nil'")
-}
 
 // IdEmptyError is the error type to describe the situation, that a nil is
 // given instead of a vertex.
@@ -520,17 +430,6 @@ type IdEmptyError struct{}
 // Implements the error interface.
 func (e IdEmptyError) Error() string {
 	return fmt.Sprint("don't know what to do with 'nil'")
-}
-
-// VertexDuplicateError is the error type to describe the situation, that a
-// given vertex already exists in the graph.
-type VertexDuplicateError struct {
-	v string
-}
-
-// Implements the error interface.
-func (e VertexDuplicateError) Error() string {
-	return fmt.Sprintf("'%s' is already known", e.v)
 }
 
 // IdDuplicateError is the error type to describe the situation, that a given
@@ -555,17 +454,6 @@ func (e VertexUnknownError) Error() string {
 	return fmt.Sprintf("'%s' is unknown", e.v)
 }
 
-// IdUnknownError is the error type to describe the situation, that a given
-// vertex does not exit in the graph.
-type IdUnknownError struct {
-	id string
-}
-
-// Implements the error interface.
-func (e IdUnknownError) Error() string {
-	return fmt.Sprintf("'%s' is unknown", e.id)
-}
-
 // EdgeDuplicateError is the error type to describe the situation, that an edge
 // already exists in the graph.
 type EdgeDuplicateError struct {
@@ -588,18 +476,6 @@ type EdgeUnknownError struct {
 // Implements the error interface.
 func (e EdgeUnknownError) Error() string {
 	return fmt.Sprintf("edge between '%s' and '%s' is unknown", e.src, e.dst)
-}
-
-// EdgeLoopError is the error type to describe loop errors (i.e. errors that
-// where raised to prevent establishing loops in the graph).
-type EdgeLoopError struct {
-	src string
-	dst string
-}
-
-// Implements the error interface.
-func (e EdgeLoopError) Error() string {
-	return fmt.Sprintf("edge between '%s' and '%s' would create a loop", e.src, e.dst)
 }
 
 // SrcDstEqualError is the error type to describe the situation, that src and
@@ -681,22 +557,10 @@ type CommitAncestors struct {
 func (d *DAG) GetEstimateMidpointAgain(c ParamConfig) (string, error) {
 
 	leafs := d.GetLeafs()
-	merges := d.GetMerges()
 	var maxValue CommitAncestors
 	total := len(d.GetVertices())
 
-	tovisit := make(map[string]bool)
-
-	numMerges := c.Merges
-	// Add a number of merges
-	for m := range merges {
-		if numMerges > 0 {
-			tovisit[m] = true
-		}
-		numMerges--
-	}
-
-	// log.Printf("Number of leaves: %v", len(leafs))
+	tovisit := d.GetNMerges(c.Merges)
 
 	// Go through all of the leafs (to cover all branches of the dag)
 	for leaf := range leafs {
@@ -706,20 +570,15 @@ func (d *DAG) GetEstimateMidpointAgain(c ParamConfig) (string, error) {
 			log.Print("Failed retrieving ancestors")
 			return "", err
 		}
-		// log.Printf("Ancestors original length: %v", len(ancestors))
 
 		// Get the middle half of the list
 		start := (len(ancestors) / 5) * 2
 		end := (len(ancestors) / 5) * 3
 		ancestors = ancestors[start:end]
 
-		// log.Printf("Start %v, end %v, length %v", start, end, len(ancestors))
-
 		// Add these to a map
 		INCREMENT := int(math.Max(1, float64(len(ancestors)/c.Divisions)))
-		// log.Printf("INCREMENT: %v", INCREMENT)
 		for i := 0; i < len(ancestors)-INCREMENT; i += INCREMENT {
-			// log.Printf("attempt to access %v", i)
 			tovisit[ancestors[i]] = true
 		}
 	}
@@ -727,24 +586,18 @@ func (d *DAG) GetEstimateMidpointAgain(c ParamConfig) (string, error) {
 	// Get the number of jobs
 	numJobs := len(tovisit)
 
-	// log.Printf("Number of jobs: %v", numJobs)
-
 	// Spawn workers
 	jobs := make(chan string, numJobs)
 	results := make(chan CommitAncestors, numJobs)
-	for w := 1; w <= runtime.GOMAXPROCS(0); w++ {
+	for w := 1; w <= int(math.Min(float64(runtime.GOMAXPROCS(0)), float64(len(tovisit)))); w++ {
 		go worker(w, d, jobs, results)
 	}
-
-	// log.Print("Workers spawned")
 
 	// Submit jobs
 	for k := range tovisit {
 		jobs <- k
 	}
 	close(jobs)
-
-	// log.Print("Jobs submitted")
 
 	// Retrieve results
 	for a := 1; a <= numJobs; a++ {
@@ -770,11 +623,8 @@ func (d *DAG) GetMidPoint(c ParamConfig) (string, error) {
 	var maxValue CommitAncestors
 
 	temp := make(map[string]bool)
-
 	temp = d.GetVertices()
-
 	numJobs := len(temp)
-	// log.Printf("Number of vertices to check: %v, but number of vertices? %v\n", numJobs, d.GetOrder())
 	if numJobs == 1 {
 		var thing string
 		for s := range temp {
@@ -807,20 +657,18 @@ func (d *DAG) GetMidPoint(c ParamConfig) (string, error) {
 	}
 	close(results)
 
-	// log.Printf("Midpoint is (%v)", maxValue.Commit)
-
 	return maxValue.Commit, nil
 }
 
 func worker(id int, d *DAG, jobs <-chan string, results chan<- CommitAncestors) {
 	for j := range jobs {
-		ancs, err := d.GetOrderedAncestors(j)
+		ancs, err := d.GetAncestorsLength(j)
 		if err != nil {
 			log.Fatal(err)
 		}
 		results <- CommitAncestors{
 			Commit: j,
-			Value:  float64(len(ancs)),
+			Value:  float64(ancs),
 		}
 	}
 }
